@@ -98,11 +98,15 @@ export function validateAdminConfiguration() {
     return false;
   }
 
-  console.log(`✅ Super Admin configured: ${superAdminEmail}`);
-
-  if (adminEmails.length > 0) {
-    console.log(`✅ Admin emails configured: ${adminEmails.join(', ')}`);
-  }
+  // Super admin and admin emails configured successfully
 
   return true;
+}
+
+export function isUserAdmin(userRole?: string | null): boolean {
+  return userRole === 'admin' || userRole === 'super_admin';
+}
+
+export function isUserSuperAdmin(userRole?: string | null): boolean {
+  return userRole === 'super_admin';
 }

@@ -123,6 +123,7 @@ model Course {
   description String?
   duration    Int?     // Duration in hours
   price       Float?
+  allowsMakeup Boolean @default(false) @map("allows_makeup") // Flag for makeup classes
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -217,6 +218,18 @@ model Attendance {
 }
 
 // Messaging and reminders
+model ReminderTemplate {
+  id          String      @id @default(cuid())
+  name        String      // Template name (e.g., "Lembrete 24h", "Confirmação Mentoria")
+  type        ReminderType // Type of reminder
+  template    String      // Message template with placeholders
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@map("reminder_templates")
+}
+
 model SmsReminder {
   id             String      @id @default(cuid())
   recipientName  String      @map("recipient_name")

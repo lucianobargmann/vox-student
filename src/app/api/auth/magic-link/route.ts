@@ -22,20 +22,20 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Special case: Super admin can login even if not in database
-    // Super admin is defined via environment variables only
-    if (!user && isSuperAdminEmail(emailLower)) {
-      console.log(`🔑 Creating super admin user on first login: ${emailLower}`);
+    // Special case: Super admin and admin users can login even if not in database
+    if (!user && (isSuperAdminEmail(emailLower) || isAdminEmail(emailLower))) {
+      const isSuperAdmin = isSuperAdminEmail(emailLower);
+      console.log(`🔑 Creating ${isSuperAdmin ? 'super admin' : 'admin'} user on first login: ${emailLower}`);
 
-      // Create super admin user on first login
+      // Create admin user on first login
       user = await prisma.user.create({
         data: {
           email: emailLower,
           emailVerified: true,
           profile: {
             create: {
-              fullName: 'Super Admin',
-              role: 'super_admin'
+              fullName: isSuperAdmin ? 'Super Admin' : 'Admin',
+              role: isSuperAdmin ? 'super_admin' : 'admin'
             }
           }
         },
@@ -55,6 +55,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         message: 'Link de acesso enviado para seu email',
       });
+    }
+
+    // Update existing user's role if they're in admin emails but don't have admin role
+    if (user && user.profile) {
+      const isSuperAdmin = isSuperAdminEmail(emailLower);
+      const isAdmin = isAdminEmail(emailLower);
+      const currentRole = user.profile.role;
+
+      let shouldUpdateRole = false;
+      let newRole = currentRole;
+
+      if (isSuperAdmin && currentRole !== 'super_admin') {
+        newRole = 'super_admin';
+        shouldUpdateRole = true;
+      } else if (isAdmin && !['admin', 'super_admin'].includes(currentRole)) {
+        newRole = 'admin';
+        shouldUpdateRole = true;
+      }
+
+      if (shouldUpdateRole) {
+        console.log(`🔄 Updating user role from ${currentRole} to ${newRole} for: ${emailLower}`);
+        await prisma.userProfile.update({
+          where: { userId: user.id },
+          data: { role: newRole }
+        });
+        // Update the user object to reflect the change
+        user.profile.role = newRole;
+      }
     }
 
     // Delete any existing magic links for this user
