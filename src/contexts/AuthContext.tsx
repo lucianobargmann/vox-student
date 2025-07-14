@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 interface User {
   id: string;
@@ -42,6 +42,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check for existing session on mount
     const checkSession = async () => {
       const token = localStorage.getItem('auth_token');
+
       if (token) {
         try {
           const response = await fetch('/api/auth/me', {
@@ -68,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkSession();
   }, []);
 
-  const requestMagicLink = async (email: string) => {
+  const requestMagicLink = useCallback(async (email: string) => {
     setLoading(true);
     try {
       const response = await fetch('/api/auth/magic-link', {
@@ -93,9 +94,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
       return { error: 'Erro de conexão' };
     }
-  };
+  }, []);
 
-  const verifyMagicLink = async (token: string) => {
+  const verifyMagicLink = useCallback(async (token: string) => {
     setLoading(true);
     try {
       const response = await fetch('/api/auth/verify', {
@@ -123,9 +124,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
       return { error: 'Erro de conexão' };
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
@@ -149,7 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
       return { error: 'Erro ao fazer logout' };
     }
-  };
+  }, []);
 
   const value: AuthContextType = {
     user,

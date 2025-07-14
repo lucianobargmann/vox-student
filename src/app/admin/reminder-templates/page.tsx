@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, MessageSquare, ArrowLeft, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useEffect, useState } from 'react';
 
 interface ReminderTemplate {
@@ -25,6 +27,7 @@ export default function ReminderTemplatesManagement() {
   const [templates, setTemplates] = useState<ReminderTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,26 +59,44 @@ export default function ReminderTemplatesManagement() {
     }
   };
 
-  const handleDelete = async (templateId: string, templateName: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o template "${templateName}"?`)) {
-      return;
-    }
+  const handleDelete = (templateId: string, templateName: string) => {
+    showConfirmation({
+      title: 'Excluir Template',
+      description: `Tem certeza que deseja excluir o template "${templateName}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      icon: 'delete',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('auth_token');
 
-    try {
-      const response = await fetch(`/api/reminder-templates/${templateId}`, {
-        method: 'DELETE',
-      });
+          if (!token) {
+            toast.error('Sessão expirada. Faça login novamente.');
+            router.push('/login');
+            return;
+          }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete template');
+          const response = await fetch(`/api/reminder-templates/${templateId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete template');
+          }
+
+          toast.success('Template excluído com sucesso!');
+          // Refresh the list
+          fetchTemplates();
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Erro ao excluir template');
+        }
       }
-
-      // Refresh the list
-      fetchTemplates();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao excluir template');
-    }
+    });
   };
 
   const getTypeBadgeVariant = (type: string) => {
@@ -243,6 +264,7 @@ export default function ReminderTemplatesManagement() {
           </CardContent>
         </Card>
       </div>
+      <ConfirmationDialog />
     </div>
   );
 }

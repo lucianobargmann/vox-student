@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,12 +13,13 @@ function VerifyMagicLinkContent() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const hasAttemptedRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const token = searchParams.get('token');
-    
+
     if (!token) {
       setError('Token não encontrado na URL');
       return;
@@ -30,7 +31,13 @@ function VerifyMagicLinkContent() {
       return;
     }
 
+    // Prevent multiple verification attempts
+    if (hasAttemptedRef.current) {
+      return;
+    }
+
     const handleVerification = async () => {
+      hasAttemptedRef.current = true;
       setIsVerifying(true);
       setError('');
 
@@ -54,7 +61,7 @@ function VerifyMagicLinkContent() {
     };
 
     handleVerification();
-  }, [searchParams, verifyMagicLink, user, router]);
+  }, [searchParams, user, router, verifyMagicLink]);
 
   if (loading || isVerifying) {
     return (

@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Users, ArrowLeft, Plus, Search, Edit, Trash2, Mail, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { canManageStudents } from '@/lib/roles';
 import { useEffect, useState } from 'react';
 
 interface Student {
@@ -39,14 +42,15 @@ export default function StudentsManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && !canManageStudents(user)) {
       router.push('/');
       return;
     }
 
-    if (user && user.profile?.role === 'admin') {
+    if (canManageStudents(user)) {
       fetchStudents();
     }
   }, [user, loading, router]);
@@ -77,26 +81,44 @@ export default function StudentsManagement() {
     fetchStudents();
   };
 
-  const handleDelete = async (studentId: string, studentName: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o aluno "${studentName}"?`)) {
-      return;
-    }
+  const handleDelete = (studentId: string, studentName: string) => {
+    showConfirmation({
+      title: 'Excluir Aluno',
+      description: `Tem certeza que deseja excluir o aluno "${studentName}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      icon: 'delete',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('auth_token');
 
-    try {
-      const response = await fetch(`/api/students/${studentId}`, {
-        method: 'DELETE',
-      });
+          if (!token) {
+            toast.error('Sessão expirada. Faça login novamente.');
+            router.push('/login');
+            return;
+          }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete student');
+          const response = await fetch(`/api/students/${studentId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete student');
+          }
+
+          toast.success('Aluno excluído com sucesso!');
+          // Refresh the list
+          fetchStudents();
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Erro ao excluir aluno');
+        }
       }
-
-      // Refresh the list
-      fetchStudents();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao excluir aluno');
-    }
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -140,7 +162,7 @@ export default function StudentsManagement() {
     );
   }
 
-  if (!user || user.profile?.role !== 'admin') {
+  if (!canManageStudents(user)) {
     return null;
   }
 
@@ -314,6 +336,7 @@ export default function StudentsManagement() {
           </CardContent>
         </Card>
       </div>
+      <ConfirmationDialog />
     </div>
   );
 }

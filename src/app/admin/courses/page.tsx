@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, BookOpen, ArrowLeft, Plus, Search, Edit, Trash2, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
 
 interface Course {
   id: string;
@@ -31,6 +33,7 @@ export default function CoursesManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,30 +79,43 @@ export default function CoursesManagement() {
     fetchCourses();
   };
 
-  const handleDelete = async (courseId: string, courseName: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o curso "${courseName}"?`)) {
-      return;
-    }
+  const handleDelete = (courseId: string, courseName: string) => {
+    showConfirmation({
+      title: 'Excluir Curso',
+      description: `Tem certeza que deseja excluir o curso "${courseName}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      icon: 'delete',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('auth_token');
 
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/courses/${courseId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
+          if (!token) {
+            toast.error('Sessão expirada. Faça login novamente.');
+            router.push('/login');
+            return;
+          }
+
+          const response = await fetch(`/api/courses/${courseId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Falha ao excluir curso');
+          }
+
+          toast.success('Curso excluído com sucesso!');
+          fetchCourses();
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Erro ao excluir curso');
         }
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Falha ao excluir curso');
       }
-
-      // Refresh the list
-      fetchCourses();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao excluir curso');
-    }
+    });
   };
 
   const formatCurrency = (value?: number) => {
@@ -294,6 +310,7 @@ export default function CoursesManagement() {
           </CardContent>
         </Card>
       </div>
+      <ConfirmationDialog />
     </div>
   );
 }
