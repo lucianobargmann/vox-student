@@ -54,16 +54,21 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
   const fetchStudent = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/students/${resolvedParams.id}`);
-      
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/students/${resolvedParams.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch student');
+        throw new Error('Falha ao carregar aluno');
       }
 
       const result = await response.json();
       const studentData = result.data;
       setStudent(studentData);
-      
+
       // Populate form
       setFormData({
         name: studentData.name || '',
@@ -74,7 +79,7 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
         status: studentData.status || 'active'
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +121,7 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to update student');
+        throw new Error(error.error || 'Falha ao atualizar aluno');
       }
 
       toast.success('Aluno atualizado com sucesso!');

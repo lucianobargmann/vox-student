@@ -58,20 +58,26 @@ export default function StudentsManagement() {
   const fetchStudents = async () => {
     try {
       setIsLoading(true);
-      const url = searchTerm 
+      setError(null);
+      const url = searchTerm
         ? `/api/students?search=${encodeURIComponent(searchTerm)}`
         : '/api/students';
-      
-      const response = await fetch(url);
-      
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch students');
+        throw new Error('Falha ao carregar alunos');
       }
 
       const result = await response.json();
       setStudents(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setIsLoading(false);
     }

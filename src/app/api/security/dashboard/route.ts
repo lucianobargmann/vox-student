@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     // Check if user is admin (assuming admin role check)
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!userProfile || !['admin', 'super_admin'].includes(userProfile.role)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -141,6 +141,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: dashboardData });
   } catch (error) {
     console.error('Get security dashboard error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

@@ -13,7 +13,7 @@ export async function GET(
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const course = await prisma.course.findUnique({
@@ -44,7 +44,7 @@ export async function GET(
     return NextResponse.json({ data: course });
   } catch (error) {
     console.error('Get course error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
 
@@ -57,7 +57,7 @@ export async function PUT(
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -119,7 +119,7 @@ export async function PUT(
     return NextResponse.json({ data: course });
   } catch (error) {
     console.error('Update course error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
 
@@ -132,7 +132,7 @@ export async function DELETE(
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     // Get course for audit

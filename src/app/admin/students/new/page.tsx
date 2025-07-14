@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Users, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { canManageStudents } from '@/lib/roles';
 
 interface StudentFormData {
   name: string;
@@ -30,7 +31,7 @@ export default function NewStudent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && !canManageStudents(user)) {
       router.push('/');
       return;
     }
@@ -42,10 +43,12 @@ export default function NewStudent() {
     setError(null);
 
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           name: formData.name.trim(),
@@ -58,7 +61,7 @@ export default function NewStudent() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create student');
+        throw new Error(error.error || 'Falha ao criar aluno');
       }
 
       router.push('/admin/students');
@@ -87,7 +90,7 @@ export default function NewStudent() {
     );
   }
 
-  if (!user || user.profile?.role !== 'admin') {
+  if (!canManageStudents(user)) {
     return null;
   }
 
