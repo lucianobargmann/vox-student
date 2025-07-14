@@ -16,17 +16,26 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const status = searchParams.get('status');
 
+    console.log('🔍 STUDENTS API DEBUG:', {
+      url: request.url,
+      search,
+      status,
+      searchParams: Object.fromEntries(searchParams.entries())
+    });
+
     let whereClause: any = {};
     if (search) {
       whereClause.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { email: { contains: search } },
+        { phone: { contains: search } }
       ];
     }
     if (status) {
       whereClause.status = status;
     }
+
+    console.log('🔍 STUDENTS WHERE CLAUSE:', whereClause);
 
     const students = await prisma.student.findMany({
       where: whereClause,
@@ -56,6 +65,8 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { name: 'asc' }
     });
+
+    console.log('🔍 STUDENTS FOUND:', students.length, students.map(s => ({ id: s.id, name: s.name })));
 
     // Log security event
     await prisma.securityEvent.create({

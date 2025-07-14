@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Users, ArrowLeft, Plus, Search, Edit, Trash2, Mail, Phone } from 'lucide-react';
+import { Loader2, Users, ArrowLeft, Plus, Search, Edit, Trash2, Mail, Phone, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -318,9 +318,18 @@ export default function StudentsManagement() {
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
                           <Button
+                            onClick={() => router.push(`/admin/students/${student.id}`)}
+                            variant="outline"
+                            size="sm"
+                            title="Ver detalhes"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
                             onClick={() => router.push(`/admin/students/${student.id}/edit`)}
                             variant="outline"
                             size="sm"
+                            title="Editar"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -329,6 +338,7 @@ export default function StudentsManagement() {
                             variant="outline"
                             size="sm"
                             className="text-destructive hover:text-destructive"
+                            title="Excluir"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

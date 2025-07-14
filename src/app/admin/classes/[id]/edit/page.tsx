@@ -13,6 +13,7 @@ import { Loader2, Calendar, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { canManageClasses } from '@/lib/roles';
+import { ClassEnrollmentsManager } from '@/components/ClassEnrollmentsManager';
 
 interface Course {
   id: string;
@@ -28,6 +29,10 @@ interface Class {
   endDate?: string;
   maxStudents?: number;
   isActive: boolean;
+  course: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function EditClass({ params }: { params: Promise<{ id: string }> }) {
@@ -330,6 +335,19 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
             </form>
           </CardContent>
         </Card>
+
+        {/* Student Management Section */}
+        {classData && (
+          <div className="mt-8">
+            <ClassEnrollmentsManager
+              classId={resolvedParams.id}
+              courseId={classData.courseId}
+              className={classData.name}
+              courseName={classData.course?.name || 'Curso'}
+              maxStudents={classData.maxStudents || undefined}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

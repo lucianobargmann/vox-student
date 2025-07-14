@@ -28,10 +28,10 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 | Funcionalidade | Status | Descrição | Arquivos Relacionados |
 |----------------|--------|-----------|----------------------|
 | **Cursos** | ✅ | Cadastro de cursos com flag de reposição | `src/app/api/courses/`, `src/app/admin/courses/` |
-| **Tipos de Lembrete** | ✅ | Templates de mensagens personalizáveis | `src/app/api/reminder-templates/`, `src/app/admin/reminder-templates/` |
+| **Tipos de Lembrete** | ❌ | Templates de mensagens personalizáveis | `src/app/api/reminder-templates/`, `src/app/admin/reminder-templates/` |
 | **Turmas** | ✅ | Gestão de turmas com horários e datas | `src/app/api/classes/`, `src/app/admin/classes/` |
 | **Alunos** | ✅ | Cadastro de alunos com dados pessoais | `src/app/api/students/`, `src/app/admin/students/` |
-| **Usuários** | ✅ | Sistema de usuários (Admin/Professor/Aluno) | `prisma/schema.prisma` |
+| **Usuários** | ❌ | Sistema de usuários (Admin/Professor/Aluno) | `prisma/schema.prisma` |
 
 ---
 
@@ -115,29 +115,10 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 
 ---
 
-## 📈 Próximos Passos
-
-### Prioridade Alta
-1. **Cadastros Básicos** - Implementar CRUD para cursos, turmas e alunos
-2. **Interface de Presença** - Criar página para controle de presença
-3. **WhatsApp Integration** - Implementar automação básica
-
-### Prioridade Média
-1. **Reconhecimento Facial** - Integrar face-api.js
-2. **Sistema de Relatórios** - Implementar geração de relatórios
-3. **Mentorias** - Sistema de agendamento
-
-### Prioridade Baixa
-1. **Mini-site de Reposição** - Interface para alunos
-2. **Lembretes Automáticos** - Sistema de notificações
-3. **Dashboard de Segurança** - Interface administrativa
-
----
-
 ## 📝 Notas de Implementação
 
 ### Tecnologias Confirmadas
-- **Frontend**: Next.js 14 + React + TypeScript
+- **Frontend**: Next.js 15 + React + TypeScript
 - **Backend**: Next.js API Routes
 - **Database**: Prisma + SQLite (dev) / PostgreSQL (prod)
 - **Authentication**: Magic Links + JWT
@@ -146,7 +127,7 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 - **Deployment**: Docker
 
 ### Tecnologias Planejadas
-- **WhatsApp**: Playwright/Puppeteer automation
+- **WhatsApp**: Puppeteer automation
 - **Face Recognition**: face-api.js
 - **PDF Generation**: jsPDF ou similar
 - **Scheduling**: node-cron ou similar

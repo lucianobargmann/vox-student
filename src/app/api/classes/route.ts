@@ -16,16 +16,24 @@ export async function GET(request: NextRequest) {
     const courseId = searchParams.get('courseId');
     const search = searchParams.get('search');
 
+    console.log('🔍 CLASSES API DEBUG:', {
+      url: request.url,
+      courseId,
+      search,
+      searchParams: Object.fromEntries(searchParams.entries())
+    });
+
     let whereClause: any = {};
     if (courseId) {
       whereClause.courseId = courseId;
     }
     if (search) {
       whereClause.name = {
-        contains: search,
-        mode: 'insensitive'
+        contains: search
       };
     }
+
+    console.log('🔍 CLASSES WHERE CLAUSE:', whereClause);
 
     const classes = await prisma.class.findMany({
       where: whereClause,
@@ -46,6 +54,8 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { startDate: 'desc' }
     });
+
+    console.log('🔍 CLASSES FOUND:', classes.length, classes.map(c => ({ id: c.id, name: c.name })));
 
     // Log security event
     await prisma.securityEvent.create({

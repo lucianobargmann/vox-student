@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Calendar, ArrowLeft, Plus, Search, Edit, Trash2, Users, BookOpen } from 'lucide-react';
+import { Loader2, Calendar, ArrowLeft, Plus, Search, Edit, Trash2, Users, BookOpen, ChevronDown, ChevronRight, Mail, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -31,6 +31,14 @@ interface Class {
   };
 }
 
+interface Student {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+}
+
 export default function ClassesManagement() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -39,6 +47,9 @@ export default function ClassesManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+  const [classStudents, setClassStudents] = useState<Record<string, Student[]>>({});
+  const [loadingStudents, setLoadingStudents] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && !user) {
@@ -127,6 +138,55 @@ export default function ClassesManagement() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const fetchClassStudents = async (classId: string) => {
+    if (classStudents[classId]) {
+      return; // Already loaded
+    }
+
+    try {
+      setLoadingStudents(prev => new Set(prev).add(classId));
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/enrollments?classId=${classId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+
+      const result = await response.json();
+      const students = result.data.map((enrollment: any) => enrollment.student);
+
+      setClassStudents(prev => ({
+        ...prev,
+        [classId]: students
+      }));
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      toast.error('Erro ao carregar alunos da turma');
+    } finally {
+      setLoadingStudents(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(classId);
+        return newSet;
+      });
+    }
+  };
+
+  const toggleClassExpansion = (classId: string) => {
+    const newExpanded = new Set(expandedClasses);
+    if (newExpanded.has(classId)) {
+      newExpanded.delete(classId);
+    } else {
+      newExpanded.add(classId);
+      fetchClassStudents(classId);
+    }
+    setExpandedClasses(newExpanded);
   };
 
   if (loading || isLoading) {
@@ -242,66 +302,129 @@ export default function ClassesManagement() {
                 </TableHeader>
                 <TableBody>
                   {classes.map((classItem) => (
-                    <TableRow key={classItem.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{classItem.name}</div>
-                          {classItem.description && (
-                            <div className="text-sm text-muted-foreground">
-                              {classItem.description}
+                    <>
+                      <TableRow key={classItem.id}>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleClassExpansion(classItem.id)}
+                              className="mr-2 p-1"
+                            >
+                              {expandedClasses.has(classItem.id) ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <div>
+                              <div className="font-medium">{classItem.name}</div>
+                              {classItem.description && (
+                                <div className="text-sm text-muted-foreground">
+                                  {classItem.description}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <BookOpen className="w-4 h-4 mr-2" />
-                          {classItem.course.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>Início: {formatDate(classItem.startDate)}</div>
-                          {classItem.endDate && (
-                            <div className="text-muted-foreground">
-                              Fim: {formatDate(classItem.endDate)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <BookOpen className="w-4 h-4 mr-2" />
+                            {classItem.course.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>Início: {formatDate(classItem.startDate)}</div>
+                            {classItem.endDate && (
+                              <div className="text-muted-foreground">
+                                Fim: {formatDate(classItem.endDate)}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Users className="w-4 h-4 mr-2" />
+                            {classItem._count.enrollments}
+                            {classItem.maxStudents && `/${classItem.maxStudents}`}
+                          </div>
+                        </TableCell>
+                        <TableCell>{classItem._count.lessons}</TableCell>
+                        <TableCell>
+                          <Badge variant={classItem.isActive ? 'success' : 'secondary'}>
+                            {classItem.isActive ? 'Ativa' : 'Inativa'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              onClick={() => router.push(`/admin/classes/${classItem.id}/edit`)}
+                              variant="outline"
+                              size="sm"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              onClick={() => handleDelete(classItem.id, classItem.name)}
+                              variant="outline"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {expandedClasses.has(classItem.id) && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="bg-muted/50">
+                            <div className="py-4">
+                              <h4 className="font-medium mb-3 flex items-center">
+                                <Users className="w-4 h-4 mr-2" />
+                                Alunos Matriculados ({classItem._count.enrollments})
+                              </h4>
+                              {loadingStudents.has(classItem.id) ? (
+                                <div className="flex items-center justify-center py-4">
+                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  Carregando alunos...
+                                </div>
+                              ) : classStudents[classItem.id]?.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                  {classStudents[classItem.id].map((student) => (
+                                    <div
+                                      key={student.id}
+                                      className="bg-background rounded-lg p-3 border"
+                                    >
+                                      <div className="font-medium text-sm">{student.name}</div>
+                                      {student.email && (
+                                        <div className="flex items-center text-xs text-muted-foreground mt-1">
+                                          <Mail className="w-3 h-3 mr-1" />
+                                          {student.email}
+                                        </div>
+                                      )}
+                                      {student.phone && (
+                                        <div className="flex items-center text-xs text-muted-foreground mt-1">
+                                          <Phone className="w-3 h-3 mr-1" />
+                                          {student.phone}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-4 text-muted-foreground">
+                                  Nenhum aluno matriculado nesta turma
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Users className="w-4 h-4 mr-2" />
-                          {classItem._count.enrollments}
-                          {classItem.maxStudents && `/${classItem.maxStudents}`}
-                        </div>
-                      </TableCell>
-                      <TableCell>{classItem._count.lessons}</TableCell>
-                      <TableCell>
-                        <Badge variant={classItem.isActive ? 'success' : 'secondary'}>
-                          {classItem.isActive ? 'Ativa' : 'Inativa'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            onClick={() => router.push(`/admin/classes/${classItem.id}/edit`)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            onClick={() => handleDelete(classItem.id, classItem.name)}
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   ))}
                 </TableBody>
               </Table>
