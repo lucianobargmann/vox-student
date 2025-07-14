@@ -1,0 +1,266 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum DayOfWeek {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  sunday
+}
+
+enum PresenceStatus {
+  present
+  absent
+  makeup
+}
+
+enum ReminderType {
+  aula
+  mentoria
+  reposicao
+}
+
+// User authentication and profiles (passwordless with magic links)
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false) @map("email_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  profile       UserProfile?
+  magicLinks    MagicLink[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+  securityEvents SecurityEvent[]
+
+  @@map("users")
+}
+
+// Magic links for passwordless authentication
+model MagicLink {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  email     String
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("magic_links")
+}
+
+// User sessions
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  fullName  String?  @map("full_name")
+  role      String   @default("user")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// Students and academic data
+model Student {
+  id                String   @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  birthDate         DateTime? @map("birth_date")
+  registrationDate  DateTime @default(now()) @map("registration_date")
+  status            String   @default("active")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  attendance        Attendance[]
+  enrollments       Enrollment[]
+
+  @@map("students")
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  duration    Int?     // Duration in hours
+  price       Float?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  classes     Class[]
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Class {
+  id          String    @id @default(cuid())
+  courseId    String    @map("course_id")
+  name        String
+  description String?
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  schedule    String?   // JSON string for schedule
+  maxStudents Int?      @map("max_students")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+  enrollments Enrollment[]
+
+  @@map("classes")
+}
+
+model Lesson {
+  id                String   @id @default(cuid())
+  classId           String   @map("class_id")
+  title             String
+  description       String?
+  scheduledDate     DateTime @map("scheduled_date")
+  duration          Int?     // Duration in minutes
+  location          String?
+  isCompleted       Boolean  @default(false) @map("is_completed")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  class             Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  attendance        Attendance[]
+  originalAttendance Attendance[] @relation("OriginalLesson")
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  studentId  String   @map("student_id")
+  courseId   String   @map("course_id")
+  classId    String?  @map("class_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+  status     String   @default("active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  class   Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, courseId])
+  @@map("enrollments")
+}
+
+model Attendance {
+  id                          String        @id @default(cuid())
+  studentId                   String        @map("student_id")
+  lessonId                    String        @map("lesson_id")
+  originalLessonId            String?       @map("original_lesson_id")
+  status                      PresenceStatus
+  markedAt                    DateTime?     @map("marked_at")
+  markedByFacialRecognition   Boolean       @default(false) @map("marked_by_facial_recognition")
+  notes                       String?
+  createdAt                   DateTime      @default(now()) @map("created_at")
+  updatedAt                   DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson         Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  originalLesson Lesson? @relation("OriginalLesson", fields: [originalLessonId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, lessonId])
+  @@map("attendance")
+}
+
+// Messaging and reminders
+model SmsReminder {
+  id             String      @id @default(cuid())
+  recipientName  String      @map("recipient_name")
+  recipientPhone String      @map("recipient_phone")
+  messageText    String      @map("message_text")
+  messageType    ReminderType @map("message_type")
+  sentAt         DateTime?   @map("sent_at")
+  deliveryStatus String?     @map("delivery_status")
+  errorMessage   String?     @map("error_message")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  @@map("sms_reminders")
+}
+
+// Audit and security
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  action      String
+  tableName   String   @map("table_name")
+  recordId    String?  @map("record_id")
+  oldValues   String?  @map("old_values") // JSON string
+  newValues   String?  @map("new_values") // JSON string
+  timestamp   DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+model SecurityEvent {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  eventType   String   @map("event_type")
+  severity    String
+  description String
+  metadata    String?  // JSON string
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  timestamp   DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("security_events")
+}
