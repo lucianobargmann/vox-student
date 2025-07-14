@@ -29,6 +29,44 @@ export function isSuperAdminEmail(email: string): boolean {
 }
 
 /**
+ * Verify authentication from request headers
+ * Returns an object with success boolean and user data if successful
+ */
+export async function verifyAuth(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { success: false, user: null };
+  }
+
+  const token = authHeader.substring(7);
+
+  try {
+    // Verify JWT
+    jwt.verify(token, process.env.JWT_SECRET!);
+
+    // Check if session exists
+    const session = await prisma.session.findUnique({
+      where: { token },
+      include: {
+        user: {
+          include: {
+            profile: true
+          }
+        }
+      }
+    });
+
+    if (!session || new Date() > session.expiresAt) {
+      return { success: false, user: null };
+    }
+
+    return { success: true, user: session.user };
+  } catch (error) {
+    return { success: false, user: null };
+  }
+}
+
+/**
  * Verify admin access from request headers
  */
 export async function verifyAdminAccess(request: NextRequest) {

@@ -44,12 +44,12 @@ export default function EditCourse({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && (!user || !['admin', 'super_admin'].includes(user.profile?.role || ''))) {
       router.push('/');
       return;
     }
 
-    if (user && user.profile?.role === 'admin') {
+    if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       fetchCourse();
     }
   }, [user, loading, router, params.id]);
@@ -57,16 +57,21 @@ export default function EditCourse({ params }: { params: { id: string } }) {
   const fetchCourse = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/courses/${params.id}`);
-      
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/courses/${params.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
       if (!response.ok) {
-        throw new Error('Course not found');
+        throw new Error('Curso não encontrado');
       }
 
       const result = await response.json();
       const courseData = result.data;
       setCourse(courseData);
-      
+
       setFormData({
         name: courseData.name,
         description: courseData.description || '',
@@ -76,7 +81,7 @@ export default function EditCourse({ params }: { params: { id: string } }) {
         isActive: courseData.isActive
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setIsLoading(false);
     }
@@ -88,10 +93,12 @@ export default function EditCourse({ params }: { params: { id: string } }) {
     setError(null);
 
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/courses/${params.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           name: formData.name.trim(),
@@ -105,7 +112,7 @@ export default function EditCourse({ params }: { params: { id: string } }) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to update course');
+        throw new Error(error.error || 'Falha ao atualizar curso');
       }
 
       router.push('/admin/courses');
@@ -134,7 +141,7 @@ export default function EditCourse({ params }: { params: { id: string } }) {
     );
   }
 
-  if (!user || user.profile?.role !== 'admin') {
+  if (!user || !['admin', 'super_admin'].includes(user.profile?.role || '')) {
     return null;
   }
 

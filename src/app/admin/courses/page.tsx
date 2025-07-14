@@ -47,20 +47,26 @@ export default function CoursesManagement() {
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
-      const url = searchTerm 
+      setError(null);
+      const url = searchTerm
         ? `/api/courses?search=${encodeURIComponent(searchTerm)}`
         : '/api/courses';
-      
-      const response = await fetch(url);
-      
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch courses');
+        throw new Error('Falha ao carregar cursos');
       }
 
       const result = await response.json();
       setCourses(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setIsLoading(false);
     }
@@ -76,13 +82,17 @@ export default function CoursesManagement() {
     }
 
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/courses/${courseId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to delete course');
+        throw new Error(error.error || 'Falha ao excluir curso');
       }
 
       // Refresh the list

@@ -30,7 +30,7 @@ export default function NewCourse() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && (!user || !['admin', 'super_admin'].includes(user.profile?.role || ''))) {
       router.push('/');
       return;
     }
@@ -42,10 +42,12 @@ export default function NewCourse() {
     setError(null);
 
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           name: formData.name.trim(),
@@ -58,7 +60,7 @@ export default function NewCourse() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create course');
+        throw new Error(error.error || 'Falha ao criar curso');
       }
 
       router.push('/admin/courses');
@@ -87,7 +89,7 @@ export default function NewCourse() {
     );
   }
 
-  if (!user || user.profile?.role !== 'admin') {
+  if (!user || !['admin', 'super_admin'].includes(user.profile?.role || '')) {
     return null;
   }
 
