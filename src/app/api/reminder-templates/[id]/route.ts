@@ -7,8 +7,9 @@ const prisma = new PrismaClient();
 // GET /api/reminder-templates/[id] - Get a specific reminder template
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const template = await prisma.reminderTemplate.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!template) {
@@ -33,8 +34,9 @@ export async function GET(
 // PUT /api/reminder-templates/[id] - Update a reminder template
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -67,7 +69,7 @@ export async function PUT(
 
     // Get old values for audit
     const oldTemplate = await prisma.reminderTemplate.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!oldTemplate) {
@@ -75,7 +77,7 @@ export async function PUT(
     }
 
     const updatedTemplate = await prisma.reminderTemplate.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: name.trim(),
         type,
@@ -119,8 +121,9 @@ export async function PUT(
 // DELETE /api/reminder-templates/[id] - Delete a reminder template
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -129,7 +132,7 @@ export async function DELETE(
 
     // Get template for audit
     const template = await prisma.reminderTemplate.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!template) {
@@ -137,7 +140,7 @@ export async function DELETE(
     }
 
     await prisma.reminderTemplate.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     // Log audit event
@@ -146,7 +149,7 @@ export async function DELETE(
         userId: authResult.user.id,
         action: 'DELETE',
         tableName: 'reminder_templates',
-        recordId: params.id,
+        recordId: id,
         oldValues: JSON.stringify(template)
       }
     });
@@ -158,7 +161,7 @@ export async function DELETE(
         eventType: 'data_modification',
         severity: 'medium',
         description: `User deleted reminder template: ${template.name}`,
-        metadata: JSON.stringify({ templateId: params.id }),
+        metadata: JSON.stringify({ templateId: id }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }

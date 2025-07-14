@@ -7,8 +7,9 @@ const prisma = new PrismaClient();
 // GET /api/classes/[id] - Get a specific class
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const classData = await prisma.class.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         course: {
           select: {
@@ -70,8 +71,9 @@ export async function GET(
 // PUT /api/classes/[id] - Update a class
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -97,7 +99,7 @@ export async function PUT(
 
     // Get old values for audit
     const oldClass = await prisma.class.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!oldClass) {
@@ -105,7 +107,7 @@ export async function PUT(
     }
 
     const classData = await prisma.class.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: name.trim(),
         description: description?.trim() || null,
@@ -161,8 +163,9 @@ export async function PUT(
 // DELETE /api/classes/[id] - Delete a class
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -171,7 +174,7 @@ export async function DELETE(
 
     // Get class for audit
     const classData = await prisma.class.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         enrollments: true,
         lessons: true
@@ -191,7 +194,7 @@ export async function DELETE(
     }
 
     await prisma.class.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     // Log audit event
@@ -200,7 +203,7 @@ export async function DELETE(
         userId: authResult.user.id,
         action: 'DELETE',
         tableName: 'classes',
-        recordId: params.id,
+        recordId: id,
         oldValues: JSON.stringify(classData)
       }
     });
@@ -212,7 +215,7 @@ export async function DELETE(
         eventType: 'data_modification',
         severity: 'medium',
         description: `User deleted class: ${classData.name}`,
-        metadata: JSON.stringify({ classId: params.id }),
+        metadata: JSON.stringify({ classId: id }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }

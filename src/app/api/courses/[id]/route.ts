@@ -7,8 +7,9 @@ const prisma = new PrismaClient();
 // GET /api/courses/[id] - Get a specific course
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const course = await prisma.course.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         classes: {
           include: {
@@ -50,8 +51,9 @@ export async function GET(
 // PUT /api/courses/[id] - Update a course
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -70,7 +72,7 @@ export async function PUT(
 
     // Get old values for audit
     const oldCourse = await prisma.course.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!oldCourse) {
@@ -78,7 +80,7 @@ export async function PUT(
     }
 
     const course = await prisma.course.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: name.trim(),
         description: description?.trim() || null,
@@ -124,8 +126,9 @@ export async function PUT(
 // DELETE /api/courses/[id] - Delete a course
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -134,7 +137,7 @@ export async function DELETE(
 
     // Get course for audit
     const course = await prisma.course.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!course) {
@@ -143,7 +146,7 @@ export async function DELETE(
 
     // Check if course has active classes or enrollments
     const courseWithRelations = await prisma.course.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         classes: true,
         enrollments: true
@@ -158,7 +161,7 @@ export async function DELETE(
     }
 
     await prisma.course.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     // Log audit event
@@ -167,7 +170,7 @@ export async function DELETE(
         userId: authResult.user.id,
         action: 'DELETE',
         tableName: 'courses',
-        recordId: params.id,
+        recordId: id,
         oldValues: JSON.stringify(course)
       }
     });
@@ -179,7 +182,7 @@ export async function DELETE(
         eventType: 'data_modification',
         severity: 'medium',
         description: `User deleted course: ${course.name}`,
-        metadata: JSON.stringify({ courseId: params.id }),
+        metadata: JSON.stringify({ courseId: id }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }

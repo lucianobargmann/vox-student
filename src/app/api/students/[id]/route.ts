@@ -7,8 +7,9 @@ const prisma = new PrismaClient();
 // GET /api/students/[id] - Get a specific student
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const student = await prisma.student.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         enrollments: {
           include: {
@@ -81,8 +82,9 @@ export async function GET(
 // PUT /api/students/[id] - Update a student
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -109,7 +111,7 @@ export async function PUT(
 
     // Get old values for audit
     const oldStudent = await prisma.student.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!oldStudent) {
@@ -119,9 +121,9 @@ export async function PUT(
     // Check if email already exists (excluding current student)
     if (email && email !== oldStudent.email) {
       const existingStudent = await prisma.student.findFirst({
-        where: { 
+        where: {
           email: email.trim(),
-          id: { not: params.id }
+          id: { not: id }
         }
       });
       if (existingStudent) {
@@ -133,7 +135,7 @@ export async function PUT(
     }
 
     const student = await prisma.student.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: name.trim(),
         email: email?.trim() || null,
@@ -179,8 +181,9 @@ export async function PUT(
 // DELETE /api/students/[id] - Delete a student
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -189,7 +192,7 @@ export async function DELETE(
 
     // Get student for audit
     const student = await prisma.student.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         enrollments: true,
         attendance: true
@@ -209,7 +212,7 @@ export async function DELETE(
     }
 
     await prisma.student.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     // Log audit event
@@ -218,7 +221,7 @@ export async function DELETE(
         userId: authResult.user.id,
         action: 'DELETE',
         tableName: 'students',
-        recordId: params.id,
+        recordId: id,
         oldValues: JSON.stringify(student)
       }
     });
@@ -230,7 +233,7 @@ export async function DELETE(
         eventType: 'data_modification',
         severity: 'medium',
         description: `User deleted student: ${student.name}`,
-        metadata: JSON.stringify({ studentId: params.id }),
+        metadata: JSON.stringify({ studentId: id }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }

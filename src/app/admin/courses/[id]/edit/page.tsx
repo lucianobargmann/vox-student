@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Loader2, BookOpen, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 
 interface CourseFormData {
   name: string;
@@ -27,7 +27,8 @@ interface Course {
   isActive: boolean;
 }
 
-export default function EditCourse({ params }: { params: { id: string } }) {
+export default function EditCourse({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const { user, loading } = useAuth();
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
@@ -52,13 +53,13 @@ export default function EditCourse({ params }: { params: { id: string } }) {
     if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       fetchCourse();
     }
-  }, [user, loading, router, params.id]);
+  }, [user, loading, router, resolvedParams.id]);
 
   const fetchCourse = async () => {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/courses/${params.id}`, {
+      const response = await fetch(`/api/courses/${resolvedParams.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -94,7 +95,7 @@ export default function EditCourse({ params }: { params: { id: string } }) {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/courses/${params.id}`, {
+      const response = await fetch(`/api/courses/${resolvedParams.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
