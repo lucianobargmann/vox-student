@@ -4,18 +4,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckSquare, ArrowLeft, Clock, Users, Save, UserCheck, UserX, RotateCcw } from 'lucide-react';
+import { Loader2, CheckSquare, ArrowLeft, Clock, Users, Save, UserCheck, UserX, RotateCcw, Camera, CameraOff, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, use } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { FaceRecognition } from '@/components/FaceRecognition';
 
 interface Student {
   id: string;
   name: string;
   email?: string;
   phone?: string;
+  faceDescriptor?: string;
 }
 
 interface Enrollment {
@@ -63,6 +65,8 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent' | 'makeup'>>({});
+  const [faceRecognitionActive, setFaceRecognitionActive] = useState(false);
+  const [recognizedStudents, setRecognizedStudents] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && (!user || !['admin', 'super_admin'].includes(user.profile?.role || ''))) {
@@ -116,6 +120,31 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
       });
 
       setAttendanceRecords(records);
+
+      // Debug: Log all student data
+      console.log('=== LESSON DATA DEBUG ===');
+      console.log('All enrollments:', lessonData.class.enrollments);
+      lessonData.class.enrollments.forEach((enrollment: Enrollment, index: number) => {
+        console.log(`Student ${index + 1}:`, {
+          id: enrollment.student.id,
+          name: enrollment.student.name,
+          faceDescriptor: enrollment.student.faceDescriptor ? 'HAS_DATA' : 'NO_DATA',
+          faceDataUpdatedAt: enrollment.student.faceDataUpdatedAt
+        });
+      });
+
+      // Auto-start face recognition if students have face data
+      const studentsWithFaceData = lessonData.class.enrollments.filter(
+        (enrollment: Enrollment) => enrollment.student.faceDescriptor
+      );
+
+      console.log(`Found ${studentsWithFaceData.length} students with face data out of ${lessonData.class.enrollments.length} total`);
+
+      if (studentsWithFaceData.length > 0) {
+        console.log(`Auto-starting recognition for students:`, studentsWithFaceData.map(e => e.student.name));
+        setFaceRecognitionActive(true);
+        toast.info(`${studentsWithFaceData.length} alunos com dados faciais encontrados. Reconhecimento iniciado automaticamente.`);
+      }
     } catch (error) {
       console.error('Error loading lesson:', error);
       toast.error('Erro ao carregar aula');
@@ -129,6 +158,54 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
       ...prev,
       [studentId]: status
     }));
+  };
+
+  const handleStudentRecognized = async (studentId: string, confidence: number) => {
+    if (!lesson) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Mark attendance via facial recognition API
+      const response = await fetch('/api/face-recognition/mark-attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          studentId,
+          lessonId: lesson.id,
+          confidence: Math.round(confidence * 100)
+        })
+      });
+
+      if (response.ok) {
+        // Update local state
+        updateAttendance(studentId, 'present');
+        setRecognizedStudents(prev => new Set(prev).add(studentId));
+
+        const student = lesson.class.enrollments.find(e => e.student.id === studentId)?.student;
+        toast.success(`${student?.name} marcado como presente automaticamente!`);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao marcar presença automaticamente');
+      }
+    } catch (error) {
+      console.error('Error marking attendance via face recognition:', error);
+      toast.error('Erro ao marcar presença automaticamente');
+    }
+  };
+
+  const toggleFaceRecognition = () => {
+    setFaceRecognitionActive(!faceRecognitionActive);
+    if (faceRecognitionActive) {
+      setRecognizedStudents(new Set());
+    }
   };
 
   const saveAttendance = async () => {
@@ -246,7 +323,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full">
+      <div className="w-full" data-testid="attendance-marking">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-4">
             <Button onClick={() => router.push('/admin/attendance')} variant="outline" size="sm">
@@ -259,6 +336,25 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
             </h1>
           </div>
           <div className="flex items-center space-x-2">
+            <Button
+              onClick={toggleFaceRecognition}
+              variant={faceRecognitionActive ? "default" : "outline"}
+              size="sm"
+              className={faceRecognitionActive ? "bg-green-600 hover:bg-green-700" : ""}
+            >
+              {faceRecognitionActive ? (
+                <>
+                  <CameraOff className="w-4 h-4 mr-2" />
+                  Parar Reconhecimento
+                </>
+              ) : (
+                <>
+                  <Camera className="w-4 h-4 mr-2" />
+                  Reconhecimento Facial
+                </>
+              )}
+            </Button>
+
             <Badge variant="outline" className="text-green-600">
               <UserCheck className="w-3 h-3 mr-1" />
               {statusCounts.present} presentes
@@ -271,6 +367,18 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
               <Badge variant="outline" className="text-blue-600">
                 <RotateCcw className="w-3 h-3 mr-1" />
                 {statusCounts.makeup} reposição
+              </Badge>
+            )}
+
+            <Badge variant="outline" className="text-purple-600">
+              <User className="w-3 h-3 mr-1" />
+              {lesson.class.enrollments.filter(e => e.student.faceDescriptor).length} com face
+            </Badge>
+
+            {faceRecognitionActive && (
+              <Badge variant="outline" className="text-green-600 animate-pulse">
+                <Camera className="w-3 h-3 mr-1" />
+                Reconhecimento ativo
               </Badge>
             )}
           </div>
@@ -293,6 +401,36 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
             </CardContent>
           )}
         </Card>
+
+        {/* Face Recognition */}
+        {faceRecognitionActive && (
+          <Card className="mb-6" data-testid="face-recognition-card">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Camera className="w-5 h-5 mr-2" />
+                  Reconhecimento Facial Ativo
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-600">Detectando rostos...</span>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                Posicione os alunos na frente da câmera. Presença será marcada automaticamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FaceRecognition
+                students={lesson.class.enrollments.map(e => e.student)}
+                onStudentRecognized={handleStudentRecognized}
+                onError={(error) => toast.error(error)}
+                isActive={faceRecognitionActive}
+                attendanceRecords={attendanceRecords}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Attendance List */}
         <Card>
@@ -317,7 +455,25 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                   >
                     <div className="flex-1">
-                      <h4 className="font-medium">{student.name}</h4>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-medium">{student.name}</h4>
+                        {recognizedStudents.has(student.id) && (
+                          <Badge variant="outline" className="text-green-600 text-xs">
+                            <Camera className="w-3 h-3 mr-1" />
+                            Reconhecido
+                          </Badge>
+                        )}
+                        {student.faceDescriptor && (
+                          <Badge
+                            variant="outline"
+                            className="text-blue-600 text-xs cursor-help"
+                            title="Dados faciais cadastrados - pode ser reconhecido automaticamente"
+                          >
+                            <User className="w-3 h-3 mr-1" />
+                            Face cadastrada
+                          </Badge>
+                        )}
+                      </div>
                       {(student.email || student.phone) && (
                         <p className="text-sm text-muted-foreground">
                           {student.email} {student.email && student.phone && '•'} {student.phone}

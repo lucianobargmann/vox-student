@@ -134,6 +134,6 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 
 ---
 
-**Última Atualização**: Janeiro 2025  
+**Última Atualização**: Julho 2025  
 **Versão**: 1.0  
-**Responsável**: Equipe de Desenvolvimento
+**Responsável**: LUCIANO BARGMANN

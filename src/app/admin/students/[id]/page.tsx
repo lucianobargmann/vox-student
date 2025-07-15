@@ -7,18 +7,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Edit, 
-  User, 
+import {
+  ArrowLeft,
+  Edit,
+  User,
   Mail,
   Phone,
   Calendar,
   GraduationCap,
-  Loader2
+  Loader2,
+  Camera
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { StudentEnrollmentsView } from '@/components/StudentEnrollmentsView';
+import { FaceRegistration } from '@/components/FaceRegistration';
 
 interface StudentData {
   id: string;
@@ -29,6 +31,9 @@ interface StudentData {
   registrationDate: string;
   status: string;
   notes: string | null;
+  faceDescriptor: string | null;
+  photoUrl: string | null;
+  faceDataUpdatedAt: string | null;
   enrollments: Array<{
     id: string;
     status: string;
@@ -72,6 +77,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const [faceRegistrationOpen, setFaceRegistrationOpen] = useState(false);
 
   useEffect(() => {
     params.then(setResolvedParams);
@@ -143,6 +149,12 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
+  const handleFaceRegistrationComplete = (studentId: string) => {
+    // Reload student data to get updated face information
+    loadStudentData();
+    toast.success('Dados faciais atualizados com sucesso!');
+  };
+
   const activeEnrollments = studentData.enrollments.filter(e => e.status === 'active').length;
   const presentAttendances = studentData.attendance.filter(a => a.status === 'present').length;
   const absentAttendances = studentData.attendance.filter(a => a.status === 'absent').length;
@@ -152,7 +164,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full">
+      <div className="w-full" data-testid="student-details">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-4">
             <Button onClick={() => router.push('/admin/students')} variant="outline" size="sm">
@@ -169,14 +181,20 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
               </p>
             </div>
           </div>
-          <Button onClick={() => router.push(`/admin/students/${studentData.id}/edit`)}>
-            <Edit className="w-4 h-4 mr-2" />
-            Editar Aluno
-          </Button>
+          <div className="flex space-x-2">
+            <Button onClick={() => setFaceRegistrationOpen(true)} variant="outline">
+              <Camera className="w-4 h-4 mr-2" />
+              {studentData.faceDescriptor ? 'Atualizar Face' : 'Cadastrar Face'}
+            </Button>
+            <Button onClick={() => router.push(`/admin/students/${studentData.id}/edit`)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Editar Aluno
+            </Button>
+          </div>
         </div>
 
         {/* Student Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Status</CardTitle>
@@ -224,6 +242,24 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
               <div className="text-2xl font-bold">{attendanceRate}%</div>
               <p className="text-xs text-muted-foreground">
                 {absentAttendances} faltas
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Reconhecimento Facial</CardTitle>
+              <Camera className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {studentData.faceDescriptor ? '✓' : '✗'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {studentData.faceDescriptor
+                  ? `Atualizado em ${formatDate(studentData.faceDataUpdatedAt!)}`
+                  : 'Não cadastrado'
+                }
               </p>
             </CardContent>
           </Card>
@@ -344,6 +380,14 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Face Registration Modal */}
+        <FaceRegistration
+          student={studentData}
+          open={faceRegistrationOpen}
+          onOpenChange={setFaceRegistrationOpen}
+          onRegistrationComplete={handleFaceRegistrationComplete}
+        />
       </div>
     </div>
   );

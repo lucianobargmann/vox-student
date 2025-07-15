@@ -152,7 +152,10 @@ export async function getTodaysLessons() {
                   id: true,
                   name: true,
                   email: true,
-                  phone: true
+                  phone: true,
+                  faceDescriptor: true,
+                  photoUrl: true,
+                  faceDataUpdatedAt: true
                 }
               }
             }

@@ -76,6 +76,20 @@ export default function AttendanceManagement() {
       }
 
       const result = await response.json();
+      console.log('=== ATTENDANCE PAGE DEBUG ===');
+      console.log('Lessons data:', result.data);
+
+      // Debug each lesson's student face data
+      result.data?.forEach((lesson: any, lessonIndex: number) => {
+        console.log(`Lesson ${lessonIndex + 1} (${lesson.title}):`);
+        lesson.class?.enrollments?.forEach((enrollment: any, studentIndex: number) => {
+          console.log(`  Student ${studentIndex + 1}:`, {
+            name: enrollment.student.name,
+            faceDescriptor: enrollment.student.faceDescriptor ? 'HAS_DATA' : 'NO_DATA'
+          });
+        });
+      });
+
       setLessons(result.data || []);
     } catch (error) {
       console.error('Error loading today\'s lessons:', error);

@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Users, ArrowLeft, Save } from 'lucide-react';
+import { Loader2, Users, ArrowLeft, Save, Camera } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { canManageStudents } from '@/lib/roles';
+import { FaceRegistration } from '@/components/FaceRegistration';
 
 interface Student {
   id: string;
@@ -21,6 +22,9 @@ interface Student {
   birthDate?: string;
   notes?: string;
   status: string;
+  faceDescriptor?: string;
+  photoUrl?: string;
+  faceDataUpdatedAt?: string;
 }
 
 export default function EditStudent({ params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +35,7 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [faceRegistrationOpen, setFaceRegistrationOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -133,6 +138,12 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
     }
   };
 
+  const handleFaceRegistrationComplete = (studentId: string) => {
+    // Reload student data to get updated face information
+    fetchStudent();
+    toast.success('Dados faciais atualizados com sucesso!');
+  };
+
   if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -169,15 +180,28 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center space-x-4 mb-8">
-          <Button onClick={() => router.push('/admin/students')} variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <Users className="w-8 h-8 mr-3" />
-            Editar Aluno
-          </h1>
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-4">
+            <Button onClick={() => router.push('/admin/students')} variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+              <Users className="w-8 h-8 mr-3" />
+              Editar Aluno
+            </h1>
+          </div>
+
+          {student && (
+            <Button
+              onClick={() => setFaceRegistrationOpen(true)}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <Camera className="w-4 h-4" />
+              <span>{student.faceDescriptor ? 'Atualizar Face' : 'Cadastrar Face'}</span>
+            </Button>
+          )}
         </div>
 
         <Card>
@@ -258,6 +282,46 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
                 />
               </div>
 
+              {/* Face Recognition Info */}
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                      <Camera className="w-5 h-5 mr-2" />
+                      Reconhecimento Facial
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {student?.faceDescriptor
+                        ? `Dados faciais cadastrados em ${new Date(student.faceDataUpdatedAt!).toLocaleDateString('pt-BR')}`
+                        : 'Cadastre os dados faciais para reconhecimento automático na presença'
+                      }
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {student?.faceDescriptor ? (
+                      <div className="flex items-center text-green-600 text-sm">
+                        <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+                        Cadastrado
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-gray-500 text-sm">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                        Não cadastrado
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      onClick={() => setFaceRegistrationOpen(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      {student?.faceDescriptor ? 'Atualizar' : 'Cadastrar'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-4">
                 <Button
                   type="button"
@@ -283,6 +347,16 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
             </form>
           </CardContent>
         </Card>
+
+        {/* Face Registration Modal */}
+        {student && (
+          <FaceRegistration
+            student={student}
+            open={faceRegistrationOpen}
+            onOpenChange={setFaceRegistrationOpen}
+            onRegistrationComplete={handleFaceRegistrationComplete}
+          />
+        )}
       </div>
     </div>
   );

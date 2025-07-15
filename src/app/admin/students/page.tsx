@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Users, ArrowLeft, Plus, Search, Edit, Trash2, Mail, Phone, Eye } from 'lucide-react';
+import { Loader2, Users, ArrowLeft, Plus, Search, Edit, Trash2, Mail, Phone, Eye, Camera } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { canManageStudents } from '@/lib/roles';
+import { FaceRegistration } from '@/components/FaceRegistration';
+import { FaceApiTest } from '@/components/FaceApiTest';
 import { useEffect, useState } from 'react';
 
 interface Student {
@@ -21,6 +23,9 @@ interface Student {
   birthDate?: string;
   status: string;
   registrationDate: string;
+  faceDescriptor?: string;
+  photoUrl?: string;
+  faceDataUpdatedAt?: string;
   _count?: {
     attendance: number;
     enrollments: number;
@@ -42,6 +47,8 @@ export default function StudentsManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [faceRegistrationOpen, setFaceRegistrationOpen] = useState(false);
   const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
 
   useEffect(() => {
@@ -127,6 +134,19 @@ export default function StudentsManagement() {
     });
   };
 
+  const handleFaceRegistration = (student: Student) => {
+    setSelectedStudent(student);
+    setFaceRegistrationOpen(true);
+  };
+
+  const handleFaceRegistrationComplete = (studentId: string) => {
+    // Reload students data to get updated face information
+    fetchStudents();
+    setFaceRegistrationOpen(false);
+    setSelectedStudent(null);
+    toast.success('Dados faciais atualizados com sucesso!');
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
@@ -210,6 +230,11 @@ export default function StudentsManagement() {
           </Button>
         </div>
 
+        {/* Temporary Face-API Test */}
+        <div className="mb-6">
+          <FaceApiTest />
+        </div>
+
         {/* Search */}
         <Card className="mb-6">
           <CardContent className="pt-6">
@@ -273,7 +298,15 @@ export default function StudentsManagement() {
                     <TableRow key={student.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{student.name}</div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">{student.name}</span>
+                            {student.faceDescriptor && (
+                              <Badge variant="outline" className="text-blue-600 text-xs">
+                                <Camera className="w-3 h-3 mr-1" />
+                                Face
+                              </Badge>
+                            )}
+                          </div>
                           {student.birthDate && (
                             <div className="text-sm text-muted-foreground">
                               Nascimento: {formatDate(student.birthDate)}
@@ -334,6 +367,15 @@ export default function StudentsManagement() {
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
+                            onClick={() => handleFaceRegistration(student)}
+                            variant="outline"
+                            size="sm"
+                            title={student.faceDescriptor ? "Atualizar dados faciais" : "Cadastrar dados faciais"}
+                            className={student.faceDescriptor ? "text-blue-600 hover:text-blue-700" : "text-gray-600 hover:text-gray-700"}
+                          >
+                            <Camera className="w-4 h-4" />
+                          </Button>
+                          <Button
                             onClick={() => handleDelete(student.id, student.name)}
                             variant="outline"
                             size="sm"
@@ -352,7 +394,18 @@ export default function StudentsManagement() {
           </CardContent>
         </Card>
       </div>
+
       <ConfirmationDialog />
+
+      {/* Face Registration Modal */}
+      {selectedStudent && (
+        <FaceRegistration
+          student={selectedStudent}
+          open={faceRegistrationOpen}
+          onOpenChange={setFaceRegistrationOpen}
+          onRegistrationComplete={handleFaceRegistrationComplete}
+        />
+      )}
     </div>
   );
 }

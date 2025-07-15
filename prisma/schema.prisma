@@ -120,6 +120,12 @@ model Student {
   registrationDate  DateTime @default(now()) @map("registration_date")
   status            String   @default("active")
   notes             String?
+
+  // Facial recognition fields
+  faceDescriptor    String?  @map("face_descriptor") // JSON string of face descriptor array
+  photoUrl          String?  @map("photo_url") // URL to reference photo
+  faceDataUpdatedAt DateTime? @map("face_data_updated_at") // When face data was last updated
+
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
