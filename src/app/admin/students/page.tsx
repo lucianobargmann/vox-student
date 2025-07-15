@@ -60,7 +60,7 @@ export default function StudentsManagement() {
     if (canManageStudents(user)) {
       fetchStudents();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchStudents = async () => {
     try {

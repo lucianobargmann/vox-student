@@ -144,20 +144,7 @@ export default function Dashboard() {
                       </Button>
                     </div>
 
-                    {/* Segurança */}
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Segurança</h3>
-                      <Button
-                        onClick={() => router.push('/admin/security')}
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Dashboard de Segurança
-                      </Button>
-                    </div>
-
-                    {/* Configurações */}
+                    {/* Sistema */}
                     <div className="space-y-3">
                       <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Sistema</h3>
                       <Button
@@ -167,6 +154,22 @@ export default function Dashboard() {
                       >
                         <Settings className="w-4 h-4 mr-2" />
                         Configurações
+                      </Button>
+                      <Button
+                        onClick={() => router.push('/admin/whatsapp')}
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Painel do WhatsApp
+                      </Button>
+                      <Button
+                        onClick={() => router.push('/admin/security')}
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
+                        <Shield className="w-4 h-4 mr-2" />
+                        Dashboard de Segurança
                       </Button>
                     </div>
                   </div>

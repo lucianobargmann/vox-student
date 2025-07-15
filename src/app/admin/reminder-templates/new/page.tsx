@@ -13,6 +13,7 @@ import { Loader2, MessageSquare, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { templatesService } from '@/lib/services/templates.service';
 
 export default function NewReminderTemplate() {
   const { user, loading } = useAuth();
@@ -47,22 +48,15 @@ export default function NewReminderTemplate() {
 
     try {
       setIsSaving(true);
-      const response = await fetch('/api/reminder-templates', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          type: formData.type,
-          template: formData.template.trim(),
-          isActive: formData.isActive
-        }),
+      const response = await templatesService.createTemplate({
+        name: formData.name.trim(),
+        type: formData.type,
+        template: formData.template.trim(),
+        isActive: formData.isActive
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create template');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create template');
       }
 
       toast.success('Template criado com sucesso!');

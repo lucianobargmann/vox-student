@@ -28,7 +28,7 @@ class AudioFeedback {
         audio.volume = 0.5; // 50% volume
         this.audioCache.set(filename, audio);
       } catch (error) {
-        console.warn(`Failed to preload audio file: ${filename}`, error);
+        console.warn(`Falha ao pré-carregar arquivo de áudio: ${filename}`, error);
       }
     });
   }
@@ -51,7 +51,7 @@ class AudioFeedback {
       try {
         await this.audioContext.resume();
       } catch (error) {
-        console.warn('Failed to resume audio context:', error);
+        console.warn('Falha ao retomar contexto de áudio:', error);
       }
     }
   }
@@ -100,7 +100,7 @@ class AudioFeedback {
         await audio.play();
         return;
       } catch (error) {
-        console.warn(`Failed to play audio file: ${filename}`, error);
+        console.warn(`Falha ao reproduzir arquivo de áudio: ${filename}`, error);
       }
     }
 

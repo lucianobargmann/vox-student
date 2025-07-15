@@ -107,7 +107,7 @@ export default function NewClass() {
     if (canManageClasses(user)) {
       fetchCourses();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

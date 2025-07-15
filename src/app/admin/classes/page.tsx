@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,7 +61,7 @@ export default function ClassesManagement() {
     if (user) {
       fetchClasses();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchClasses = async () => {
     try {
@@ -302,8 +303,8 @@ export default function ClassesManagement() {
                 </TableHeader>
                 <TableBody>
                   {classes.map((classItem) => (
-                    <>
-                      <TableRow key={classItem.id}>
+                    <React.Fragment key={classItem.id}>
+                      <TableRow>
                         <TableCell>
                           <div className="flex items-center">
                             <Button
@@ -424,7 +425,7 @@ export default function ClassesManagement() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>

@@ -45,7 +45,7 @@ export default function CoursesManagement() {
     if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       fetchCourses();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchCourses = async () => {
     try {

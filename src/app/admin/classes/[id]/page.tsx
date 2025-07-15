@@ -76,7 +76,7 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
       router.push('/');
       return;
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (resolvedParams?.id) {

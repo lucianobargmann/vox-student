@@ -8,6 +8,8 @@ import { Loader2, Users, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { canManageStudents } from '@/lib/roles';
+import { studentsService } from '@/lib/services/students.service';
+import { toast } from 'sonner';
 
 interface StudentFormData {
   name: string;
@@ -43,27 +45,17 @@ export default function NewStudent() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/students', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null,
-          birthDate: formData.birthDate || null,
-          notes: formData.notes.trim() || null
-        }),
+      const response = await studentsService.createStudent({
+        name: formData.name.trim(),
+        email: formData.email.trim() || undefined,
+        phone: formData.phone.trim() || undefined
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Falha ao criar aluno');
+      if (!response.success) {
+        throw new Error(response.error || 'Falha ao criar aluno');
       }
 
+      toast.success('Aluno criado com sucesso!');
       router.push('/admin/students');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');

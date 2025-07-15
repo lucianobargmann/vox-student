@@ -94,7 +94,7 @@ export default function AttendanceManagement() {
     if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       loadTodaysLessons();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   if (loading || isLoading) {
     return (

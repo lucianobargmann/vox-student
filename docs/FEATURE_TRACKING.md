@@ -39,10 +39,17 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 
 | Funcionalidade | Status | Descrição | Arquivos Relacionados |
 |----------------|--------|-----------|----------------------|
-| **WhatsApp Web Automation** | ❌ | Automação via Playwright/Puppeteer | - |
-| **Mensagens Personalizadas** | ❌ | Templates com placeholders | - |
-| **Rate Limiting (30s)** | ❌ | Intervalo entre mensagens | - |
-| **Magic Link via WhatsApp** | ❌ | Login por telefone + WhatsApp | - |
+| **WhatsApp Web.js Service** | ✅ | Serviço principal de WhatsApp com conexão e autenticação | `src/lib/whatsapp.ts` |
+| **Mensagens Personalizadas** | ✅ | Templates com placeholders dinâmicos | `src/lib/template-processor.ts`, `src/app/api/templates/test/` |
+| **Rate Limiting (30s)** | ✅ | Intervalo configurável entre mensagens | `src/lib/whatsapp.ts`, `src/lib/message-queue.ts` |
+| **Magic Link via WhatsApp** | ✅ | Login por telefone + WhatsApp | `src/app/api/whatsapp/magic-link/`, `src/app/login/page.tsx` |
+| **Message Queue System** | ✅ | Sistema de fila com retry e prioridades | `src/lib/message-queue.ts`, `src/app/api/queue/` |
+| **Automated Reminders** | ✅ | Lembretes automáticos baseados em horários | `src/lib/reminder-service.ts`, `src/app/api/reminders/` |
+| **Admin Interface** | ✅ | Painel administrativo completo | `src/app/admin/whatsapp/page.tsx` |
+| **Settings Management** | ✅ | Configurações integradas ao painel admin | `src/app/api/whatsapp/settings/`, `src/app/admin/settings/page.tsx` |
+| **Comprehensive Logging** | ✅ | Sistema de logs detalhado com níveis | `src/lib/whatsapp-logger.ts`, `src/app/api/whatsapp/logs/` |
+| **Connection Management** | ✅ | Gerenciamento de conexão com QR Code | `src/app/api/whatsapp/status/` |
+| **Database Integration** | ✅ | Modelos para mensagens, configurações e logs | `prisma/schema.prisma` (WhatsAppMessage, WhatsAppSettings, MessageQueue, WhatsAppLog) |
 
 ---
 
@@ -66,7 +73,7 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 | **Relatório de Presença** | ❌ | Filtros e visualização | - |
 | **Sugestões Rápidas** | ❌ | Botões das 3 últimas aulas | - |
 | **Export PDF** | ❌ | Geração de PDF para impressão | - |
-| **Envio Automático** | ❌ | WhatsApp ao fim da aula | - |
+| **Envio Automático** | ✅ | WhatsApp ao fim da aula | `src/lib/reminder-service.ts` |
 
 ---
 
@@ -76,7 +83,7 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 |----------------|--------|-----------|----------------------|
 | **Agendamento** | ❌ | Sistema de agendamento de mentorias | - |
 | **Escalonamento** | ❌ | Distribuição equilibrada por semana | - |
-| **Mensagens Automáticas** | ❌ | WhatsApp para agendamento | - |
+| **Mensagens Automáticas** | ✅ | WhatsApp para agendamento | `src/lib/reminder-service.ts`, `src/lib/template-processor.ts` |
 
 ---
 
@@ -85,11 +92,11 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 | Funcionalidade | Status | Descrição | Arquivos Relacionados |
 |----------------|--------|-----------|----------------------|
 | **Mini-site de Reposição** | ❌ | Interface para alunos | - |
-| **Login via Telefone** | ❌ | Magic link via WhatsApp | - |
+| **Login via Telefone** | ✅ | Magic link via WhatsApp | `src/app/api/whatsapp/magic-link/`, `src/app/login/page.tsx` |
 | **Visualização de Faltas** | ❌ | Aulas perdidas pelo aluno | - |
 | **Próximas Turmas** | ❌ | Opções de reposição disponíveis | - |
-| **Confirmação** | ❌ | WhatsApp para aluno e administração | - |
-| **Sugestão Automática** | ❌ | WhatsApp após detectar ausência | - |
+| **Confirmação** | ✅ | WhatsApp para aluno e administração | `src/lib/reminder-service.ts` |
+| **Sugestão Automática** | ✅ | WhatsApp após detectar ausência | `src/lib/reminder-service.ts` |
 
 ---
 
@@ -97,9 +104,9 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 
 | Funcionalidade | Status | Descrição | Arquivos Relacionados |
 |----------------|--------|-----------|----------------------|
-| **Lembrete 24h** | ❌ | WhatsApp antes da aula | - |
-| **Lembrete Reposição** | ❌ | Incluir alunos em reposição | - |
-| **Sistema de Agendamento** | ❌ | Cron jobs ou scheduler | - |
+| **Lembrete 24h** | ✅ | WhatsApp antes da aula | `src/lib/reminder-service.ts`, `src/app/api/reminders/schedule/` |
+| **Lembrete Reposição** | ✅ | Incluir alunos em reposição | `src/lib/reminder-service.ts`, `src/app/api/reminders/makeup/` |
+| **Sistema de Agendamento** | ✅ | Sistema de fila com agendamento | `src/lib/message-queue.ts` |
 
 ---
 
@@ -123,11 +130,11 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 - **Database**: Prisma + SQLite (dev) / PostgreSQL (prod)
 - **Authentication**: Magic Links + JWT
 - **Email**: SMTP + Mailpit (dev)
+- **WhatsApp**: whatsapp-web.js + QR Code authentication
 - **Testing**: Puppeteer E2E
 - **Deployment**: Docker
 
 ### Tecnologias Planejadas
-- **WhatsApp**: Puppeteer automation
 - **Face Recognition**: face-api.js
 - **PDF Generation**: jsPDF ou similar
 - **Scheduling**: node-cron ou similar

@@ -6,55 +6,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, BarChart3, ArrowLeft, Users, BookOpen, Calendar, TrendingUp, Download, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-interface Stats {
-  totalStudents: number;
-  totalCourses: number;
-  totalClasses: number;
-  activeEnrollments: number;
-}
+import { reportsService, ReportStats } from '@/lib/services/reports.service';
 
 export default function ReportsManagement() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<ReportStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && (!user || !['admin', 'super_admin'].includes(user.profile?.role || ''))) {
       router.push('/');
       return;
     }
 
-    if (user && user.profile?.role === 'admin') {
+    if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       fetchStats();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchStats = async () => {
     try {
       setIsLoading(true);
-      // Fetch basic statistics
-      const [studentsRes, coursesRes, classesRes] = await Promise.all([
-        fetch('/api/students'),
-        fetch('/api/courses'),
-        fetch('/api/classes')
-      ]);
-
-      if (studentsRes.ok && coursesRes.ok && classesRes.ok) {
-        const [students, courses, classes] = await Promise.all([
-          studentsRes.json(),
-          coursesRes.json(),
-          classesRes.json()
-        ]);
-
-        setStats({
-          totalStudents: students.data?.length || 0,
-          totalCourses: courses.data?.length || 0,
-          totalClasses: classes.data?.length || 0,
-          activeEnrollments: students.data?.reduce((acc: number, student: any) =>
-            acc + (student._count?.enrollments || 0), 0) || 0
-        });
+      const response = await reportsService.getStats();
+      
+      if (response.success && response.data) {
+        setStats(response.data);
       }
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -74,7 +51,7 @@ export default function ReportsManagement() {
     );
   }
 
-  if (!user || user.profile?.role !== 'admin') {
+  if (!user || !['admin', 'super_admin'].includes(user.profile?.role || '')) {
     return null;
   }
 

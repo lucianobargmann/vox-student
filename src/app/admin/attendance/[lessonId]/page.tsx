@@ -77,7 +77,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
     if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       loadLesson();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const loadLesson = async () => {
     try {

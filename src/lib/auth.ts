@@ -29,6 +29,76 @@ export function isSuperAdminEmail(email: string): boolean {
 }
 
 /**
+ * Check if a phone number is configured as admin in environment variables
+ */
+export function isAdminPhone(phoneNumber: string): boolean {
+  const superAdminPhone = process.env.SUPER_ADMIN_PHONE;
+  const adminPhones = process.env.ADMIN_PHONES?.split(',').map(p => p.trim().replace(/\D/g, '')) || [];
+
+  const normalizedPhone = phoneNumber.replace(/\D/g, '');
+
+  // Check if it's the super admin phone
+  if (superAdminPhone && normalizedPhone === superAdminPhone.replace(/\D/g, '')) {
+    return true;
+  }
+
+  // Check if it's in the admin phones list
+  return adminPhones.includes(normalizedPhone);
+}
+
+/**
+ * Check if a phone number is the super admin
+ */
+export function isSuperAdminPhone(phoneNumber: string): boolean {
+  const superAdminPhone = process.env.SUPER_ADMIN_PHONE;
+  return superAdminPhone && phoneNumber.replace(/\D/g, '') === superAdminPhone.replace(/\D/g, '');
+}
+
+/**
+ * Check if a phone number belongs to a registered student
+ */
+export async function isStudentPhone(phoneNumber: string): Promise<boolean> {
+  try {
+    const normalizedPhone = phoneNumber.replace(/\D/g, '');
+
+    const student = await prisma.student.findFirst({
+      where: {
+        phone: {
+          contains: normalizedPhone
+        },
+        status: 'active'
+      }
+    });
+
+    return !!student;
+  } catch (error) {
+    console.error('Error checking student phone:', error);
+    return false;
+  }
+}
+
+/**
+ * Get student by phone number
+ */
+export async function getStudentByPhone(phoneNumber: string) {
+  try {
+    const normalizedPhone = phoneNumber.replace(/\D/g, '');
+
+    return await prisma.student.findFirst({
+      where: {
+        phone: {
+          contains: normalizedPhone
+        },
+        status: 'active'
+      }
+    });
+  } catch (error) {
+    console.error('Error getting student by phone:', error);
+    return null;
+  }
+}
+
+/**
  * Verify authentication from request headers
  * Returns an object with success boolean and user data if successful
  */

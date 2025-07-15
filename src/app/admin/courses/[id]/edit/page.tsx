@@ -56,7 +56,7 @@ export default function EditCourse({ params }: { params: Promise<{ id: string }>
     if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       fetchCourse();
     }
-  }, [user, loading, router, resolvedParams.id]);
+  }, [user, loading, resolvedParams.id]);
 
   const fetchCourse = async () => {
     try {

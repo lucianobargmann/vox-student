@@ -65,7 +65,7 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
     if (canManageClasses(user)) {
       fetchData();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchData = async () => {
     try {

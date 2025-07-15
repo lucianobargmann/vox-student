@@ -45,3 +45,5 @@ prisma/*.db
 test-results/
 playwright-report/
 
+whatsapp-session/
+.wwebjs_cache/

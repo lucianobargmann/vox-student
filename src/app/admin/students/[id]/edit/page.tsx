@@ -54,7 +54,7 @@ export default function EditStudent({ params }: { params: Promise<{ id: string }
     if (canManageStudents(user)) {
       fetchStudent();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchStudent = async () => {
     try {

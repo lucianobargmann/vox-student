@@ -88,7 +88,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
       router.push('/');
       return;
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (resolvedParams?.id) {

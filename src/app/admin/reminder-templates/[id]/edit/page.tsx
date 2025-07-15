@@ -45,7 +45,7 @@ export default function EditReminderTemplate({ params }: { params: Promise<{ id:
     if (user && user.profile?.role === 'admin') {
       fetchTemplate();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchTemplate = async () => {
     try {

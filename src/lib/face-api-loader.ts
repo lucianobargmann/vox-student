@@ -47,11 +47,11 @@ export async function loadFaceApiModels(): Promise<void> {
     }
 
     modelsLoaded = true;
-    console.log('Face-api.js models loaded successfully');
+    console.log('Modelos face-api.js carregados com sucesso');
   } catch (error) {
-    console.error('Error loading face-api.js models:', error);
+    console.error('Erro ao carregar modelos face-api.js:', error);
     modelsLoaded = false;
-    throw new Error('Failed to load face recognition models');
+    throw new Error('Falha ao carregar modelos de reconhecimento facial');
   }
 }
 

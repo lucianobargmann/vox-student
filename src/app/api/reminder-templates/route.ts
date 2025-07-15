@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '@/lib/auth';
+import { TemplateProcessor } from '@/lib/template-processor';
 
 const prisma = new PrismaClient();
 
@@ -73,6 +74,15 @@ export async function POST(request: NextRequest) {
     if (!template || template.trim().length < 10) {
       return NextResponse.json(
         { error: 'Template de mensagem é obrigatório (mínimo 10 caracteres)' },
+        { status: 400 }
+      );
+    }
+
+    // Validate template syntax
+    const validation = TemplateProcessor.validateTemplate(template.trim());
+    if (!validation.isValid) {
+      return NextResponse.json(
+        { error: `Template inválido: ${validation.errors.join(', ')}` },
         { status: 400 }
       );
     }

@@ -11,15 +11,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useEffect, useState } from 'react';
-
-interface ReminderTemplate {
-  id: string;
-  name: string;
-  type: 'aula' | 'mentoria' | 'reposicao';
-  template: string;
-  isActive: boolean;
-  createdAt: string;
-}
+import { templatesService, ReminderTemplate } from '@/lib/services/templates.service';
 
 export default function ReminderTemplatesManagement() {
   const { user, loading } = useAuth();
@@ -31,27 +23,26 @@ export default function ReminderTemplatesManagement() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && (!user || !['admin', 'super_admin'].includes(user.profile?.role || ''))) {
       router.push('/');
       return;
     }
 
-    if (user && user.profile?.role === 'admin') {
+    if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       fetchTemplates();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchTemplates = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/reminder-templates');
+      const response = await templatesService.getTemplates(searchTerm);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch reminder templates');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch reminder templates');
       }
 
-      const result = await response.json();
-      setTemplates(result.data);
+      setTemplates(response.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -69,24 +60,10 @@ export default function ReminderTemplatesManagement() {
       icon: 'delete',
       onConfirm: async () => {
         try {
-          const token = localStorage.getItem('auth_token');
+          const response = await templatesService.deleteTemplate(templateId);
 
-          if (!token) {
-            toast.error('Sessão expirada. Faça login novamente.');
-            router.push('/login');
-            return;
-          }
-
-          const response = await fetch(`/api/reminder-templates/${templateId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to delete template');
+          if (!response.success) {
+            throw new Error(response.error || 'Failed to delete template');
           }
 
           toast.success('Template excluído com sucesso!');
@@ -140,7 +117,7 @@ export default function ReminderTemplatesManagement() {
     );
   }
 
-  if (!user || user.profile?.role !== 'admin') {
+  if (!user || !['admin', 'super_admin'].includes(user.profile?.role || '')) {
     return null;
   }
 

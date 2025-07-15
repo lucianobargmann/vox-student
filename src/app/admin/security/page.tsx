@@ -8,55 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, Shield, AlertTriangle, Activity, Users, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-interface SecurityEvent {
-  id: string;
-  eventType: string;
-  severity: string;
-  description: string;
-  timestamp: string;
-  user?: {
-    email: string;
-    profile?: {
-      fullName: string;
-    };
-  };
-}
-
-interface AuditLog {
-  id: string;
-  action: string;
-  tableName: string;
-  timestamp: string;
-  user?: {
-    email: string;
-    profile?: {
-      fullName: string;
-    };
-  };
-}
-
-interface DashboardData {
-  summary: {
-    totalSecurityEvents: number;
-    totalAuditLogs: number;
-    failedLoginAttempts: number;
-    activeUsers: number;
-  };
-  statistics: {
-    eventsByType: Record<string, number>;
-    eventsBySeverity: Record<string, number>;
-    actionsByType: Record<string, number>;
-  };
-  recentEvents: SecurityEvent[];
-  recentAuditLogs: AuditLog[];
-  failedLogins: SecurityEvent[];
-}
+import { securityService, SecurityDashboardData } from '@/lib/services/security.service';
 
 export default function SecurityDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<SecurityDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,19 +26,18 @@ export default function SecurityDashboard() {
     if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
       fetchDashboardData();
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/security/dashboard');
+      const response = await securityService.getDashboardData();
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch dashboard data');
       }
 
-      const result = await response.json();
-      setDashboardData(result.data);
+      setDashboardData(response.data || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

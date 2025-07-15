@@ -273,6 +273,77 @@ model SmsReminder {
   @@map("sms_reminders")
 }
 
+model WhatsAppMessage {
+  id             String      @id @default(cuid())
+  recipientPhone String      @map("recipient_phone")
+  messageText    String      @map("message_text")
+  messageId      String?     @map("message_id") // WhatsApp message ID
+  messageType    ReminderType? @map("message_type") // Optional: type of reminder
+  sentAt         DateTime?   @map("sent_at")
+  deliveryStatus String      @default("pending") @map("delivery_status") // pending, sent, delivered, failed
+  errorMessage   String?     @map("error_message")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@map("whatsapp_messages")
+}
+
+model WhatsAppSettings {
+  id                    String   @id @default(cuid())
+  enabled               Boolean  @default(false)
+  sessionData           String?  @map("session_data") // Encrypted session data
+  qrCode                String?  @map("qr_code") // Current QR code for authentication
+  isAuthenticated       Boolean  @default(false) @map("is_authenticated")
+  phoneNumber           String?  @map("phone_number") // Connected WhatsApp number
+  lastConnectionCheck   DateTime? @map("last_connection_check")
+  rateLimitSeconds      Int      @default(30) @map("rate_limit_seconds")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("whatsapp_settings")
+}
+
+model MessageQueue {
+  id             String      @id @default(cuid())
+  recipientPhone String      @map("recipient_phone")
+  messageText    String      @map("message_text")
+  messageType    ReminderType? @map("message_type")
+  priority       Int         @default(3) // 1 = highest, 5 = lowest
+  scheduledFor   DateTime    @map("scheduled_for")
+  attempts       Int         @default(0)
+  maxAttempts    Int         @default(3) @map("max_attempts")
+  status         String      @default("pending") // pending, processing, sent, failed, cancelled
+  sentAt         DateTime?   @map("sent_at")
+  lastAttemptAt  DateTime?   @map("last_attempt_at")
+  errorMessage   String?     @map("error_message")
+  metadata       String?     // JSON string for additional data
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@index([status, scheduledFor])
+  @@index([priority, scheduledFor])
+  @@map("message_queue")
+}
+
+model WhatsAppLog {
+  id           String   @id @default(cuid())
+  level        String   // debug, info, warn, error, critical
+  eventType    String   @map("event_type") // connection_established, message_sent, etc.
+  message      String
+  metadata     String?  // JSON string for additional data
+  errorMessage String?  @map("error_message")
+  errorStack   String?  @map("error_stack")
+  userId       String?  @map("user_id")
+  phoneNumber  String?  @map("phone_number")
+  messageId    String?  @map("message_id")
+  timestamp    DateTime @default(now())
+
+  @@index([level, timestamp])
+  @@index([eventType, timestamp])
+  @@index([phoneNumber, timestamp])
+  @@map("whatsapp_logs")
+}
+
 // Audit and security
 model AuditLog {
   id          String   @id @default(cuid())

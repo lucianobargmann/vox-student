@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Mail, Loader2, CheckCircle } from 'lucide-react';
+import { Mail, Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
 
 export default function Login() {
   const { user, requestMagicLink, loading } = useAuth();
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [authMethod, setAuthMethod] = useState<'email' | 'whatsapp'>('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -23,7 +25,7 @@ export default function Login() {
     if (user && !loading) {
       router.push('/');
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +35,32 @@ export default function Login() {
     setSuccess(false);
 
     try {
-      const { error } = await requestMagicLink(email);
-
-      if (error) {
-        setError(error);
+      if (authMethod === 'email') {
+        const { error } = await requestMagicLink(email);
+        if (error) {
+          setError(error);
+        } else {
+          setSuccess(true);
+          setMessage('Link de acesso enviado para seu email! Verifique sua caixa de entrada.');
+        }
       } else {
-        setSuccess(true);
-        setMessage('Link de acesso enviado para seu email! Verifique sua caixa de entrada.');
+        // WhatsApp magic link
+        const response = await fetch('/api/whatsapp/magic-link', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ phoneNumber })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || 'Erro ao enviar link via WhatsApp');
+        } else {
+          setSuccess(true);
+          setMessage('Link de acesso enviado via WhatsApp! Verifique suas mensagens.');
+        }
       }
     } catch {
       setError('Erro inesperado. Tente novamente.');
@@ -90,8 +111,8 @@ export default function Login() {
                   Email enviado!
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Enviamos um link de acesso para <strong>{email}</strong>.
-                  Clique no link para fazer login.
+                  Enviamos um link de acesso para <strong>{authMethod === 'email' ? email : phoneNumber}</strong>.
+                  {authMethod === 'email' ? 'Clique no link para fazer login.' : 'Clique no link recebido via WhatsApp para fazer login.'}
                 </p>
               </div>
               <Button
@@ -99,6 +120,7 @@ export default function Login() {
                 onClick={() => {
                   setSuccess(false);
                   setEmail('');
+                  setPhoneNumber('');
                   setMessage('');
                 }}
                 className="w-full"
@@ -108,20 +130,62 @@ export default function Login() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Authentication Method Selector */}
+              <div className="flex space-x-2 p-1 bg-gray-100 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod('email')}
+                  className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMethod === 'email'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
                   Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod('whatsapp')}
+                  className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMethod === 'whatsapp'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  WhatsApp
+                </button>
+              </div>
+
+              {/* Input Field */}
+              <div>
+                <label htmlFor={authMethod} className="block text-sm font-medium text-gray-700 mb-2">
+                  {authMethod === 'email' ? 'Email' : 'Número do WhatsApp'}
                 </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  required
-                  disabled={isSubmitting}
-                  className="w-full"
-                />
+                {authMethod === 'email' ? (
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    required
+                    disabled={isSubmitting}
+                    className="w-full"
+                  />
+                ) : (
+                  <Input
+                    id="whatsapp"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="+55 11 99999-9999"
+                    required
+                    disabled={isSubmitting}
+                    className="w-full"
+                  />
+                )}
               </div>
 
               {error && (
@@ -138,7 +202,7 @@ export default function Login() {
 
               <Button
                 type="submit"
-                disabled={isSubmitting || !email}
+                disabled={isSubmitting || (authMethod === 'email' ? !email : !phoneNumber)}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
                 {isSubmitting ? (
@@ -148,8 +212,12 @@ export default function Login() {
                   </>
                 ) : (
                   <>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Enviar link de acesso
+                    {authMethod === 'email' ? (
+                      <Mail className="w-4 h-4 mr-2" />
+                    ) : (
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                    )}
+                    Enviar link via {authMethod === 'email' ? 'Email' : 'WhatsApp'}
                   </>
                 )}
               </Button>

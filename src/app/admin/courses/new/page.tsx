@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Loader2, BookOpen, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { coursesService } from '@/lib/services/courses.service';
+import { toast } from 'sonner';
 
 interface CourseFormData {
   name: string;
@@ -44,28 +46,17 @@ export default function NewCourse() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/courses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          description: formData.description.trim() || null,
-          duration: formData.duration ? parseInt(formData.duration) : null,
-          numberOfLessons: formData.numberOfLessons ? parseInt(formData.numberOfLessons) : null,
-          price: formData.price ? parseFloat(formData.price) : null,
-          allowsMakeup: formData.allowsMakeup
-        }),
+      const response = await coursesService.createCourse({
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        duration: formData.duration ? parseInt(formData.duration) : undefined
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Falha ao criar curso');
+      if (!response.success) {
+        throw new Error(response.error || 'Falha ao criar curso');
       }
 
+      toast.success('Curso criado com sucesso!');
       router.push('/admin/courses');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
