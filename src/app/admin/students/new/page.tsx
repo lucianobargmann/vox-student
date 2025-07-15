@@ -96,7 +96,7 @@ export default function NewStudent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-4">
             <Button onClick={() => router.push('/admin/students')} variant="outline" size="sm">

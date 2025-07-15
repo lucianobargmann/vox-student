@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { CreateStudentDialog } from '@/components/CreateStudentDialog';
 
 interface Student {
   id: string;
@@ -83,6 +84,7 @@ export function EnrollStudentDialog({
   const [courses, setCourses] = useState<Course[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showCreateStudentDialog, setShowCreateStudentDialog] = useState(false);
   const [formData, setFormData] = useState({
     courseId: preselectedCourseId || '',
     classId: preselectedClassId || '',
@@ -209,16 +211,18 @@ export function EnrollStudentDialog({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      const enrollmentData = {
+        studentId: selectedStudent.id,
+        courseId: formData.courseId,
+        classId: formData.classId === 'no-class' ? null : formData.classId || null,
+        type: formData.type,
+        notes: formData.notes.trim() || null
+      };
+
       const response = await fetch('/api/enrollments', {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          courseId: formData.courseId,
-          classId: formData.classId === 'no-class' ? null : formData.classId || null,
-          type: formData.type,
-          notes: formData.notes.trim() || null
-        }),
+        body: JSON.stringify(enrollmentData),
       });
 
       const result = await response.json();
@@ -243,6 +247,7 @@ export function EnrollStudentDialog({
     setSelectedStudent(null);
     setSearchTerm('');
     setStudents([]);
+    setShowCreateStudentDialog(false);
     setFormData({
       courseId: preselectedCourseId || '',
       classId: preselectedClassId || '',
@@ -250,6 +255,14 @@ export function EnrollStudentDialog({
       notes: ''
     });
     onOpenChange(false);
+  };
+
+  const handleStudentCreated = (newStudent: Student) => {
+    // Add the new student to the list and select it
+    setStudents(prev => [newStudent, ...prev]);
+    setSelectedStudent(newStudent);
+    setStep('details');
+    setShowCreateStudentDialog(false);
   };
 
   const getEnrollmentTypeLabel = (type: string) => {
@@ -285,8 +298,9 @@ export function EnrollStudentDialog({
     selectedClass.enrollments.length >= selectedClass.maxStudents;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />
@@ -303,7 +317,19 @@ export function EnrollStudentDialog({
         {step === 'student' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="search">Buscar Aluno</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="search">Buscar Aluno</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreateStudentDialog(true)}
+                  className="text-xs"
+                >
+                  <UserPlus className="w-3 h-3 mr-1" />
+                  Criar Novo
+                </Button>
+              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -521,5 +547,12 @@ export function EnrollStudentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <CreateStudentDialog
+      open={showCreateStudentDialog}
+      onOpenChange={setShowCreateStudentDialog}
+      onStudentCreated={handleStudentCreated}
+    />
+  </>
   );
 }

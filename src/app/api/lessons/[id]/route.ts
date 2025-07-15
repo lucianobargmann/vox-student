@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 
-const prisma = new PrismaClient();
-
-// GET /api/classes/[id] - Get a specific class
+// GET /api/lessons/[id] - Get a specific lesson
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,27 +14,36 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const classData = await prisma.class.findUnique({
+    const lesson = await prisma.lesson.findUnique({
       where: { id },
       include: {
-        course: {
-          select: {
-            id: true,
-            name: true,
-            allowsMakeup: true
-          }
-        },
-        lessons: {
+        class: {
           include: {
-            _count: {
+            course: {
               select: {
-                attendance: true
+                id: true,
+                name: true,
+                allowsMakeup: true
+              }
+            },
+            enrollments: {
+              where: {
+                status: 'active'
+              },
+              include: {
+                student: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true
+                  }
+                }
               }
             }
-          },
-          orderBy: { scheduledDate: 'asc' }
+          }
         },
-        enrollments: {
+        attendance: {
           include: {
             student: {
               select: {
@@ -47,28 +54,22 @@ export async function GET(
               }
             }
           }
-        },
-        _count: {
-          select: {
-            enrollments: true,
-            lessons: true
-          }
         }
       }
     });
 
-    if (!classData) {
-      return NextResponse.json({ error: 'Turma não encontrada' }, { status: 404 });
+    if (!lesson) {
+      return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
     }
 
-    return NextResponse.json({ data: classData });
+    return NextResponse.json({ data: lesson });
   } catch (error) {
-    console.error('Get class error:', error);
+    console.error('Get lesson error:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
 
-// PUT /api/classes/[id] - Update a class
+// PUT /api/lessons/[id] - Update a lesson
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -81,49 +82,53 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, description, startDate, endDate, classTime, schedule, maxStudents, isActive } = body;
+    const { title, description, scheduledDate, duration, location, isCompleted, notes } = body;
 
-    if (!name || name.trim().length < 2) {
+    if (!title || title.trim().length < 2) {
       return NextResponse.json(
-        { error: 'Nome da turma é obrigatório (mínimo 2 caracteres)' },
+        { error: 'Título da aula é obrigatório (mínimo 2 caracteres)' },
         { status: 400 }
       );
     }
 
-    if (!startDate) {
+    if (!scheduledDate) {
       return NextResponse.json(
-        { error: 'Data de início é obrigatória' },
+        { error: 'Data da aula é obrigatória' },
         { status: 400 }
       );
     }
 
     // Get old values for audit
-    const oldClass = await prisma.class.findUnique({
+    const oldLesson = await prisma.lesson.findUnique({
       where: { id }
     });
 
-    if (!oldClass) {
-      return NextResponse.json({ error: 'Turma não encontrada' }, { status: 404 });
+    if (!oldLesson) {
+      return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
     }
 
-    const classData = await prisma.class.update({
+    const lesson = await prisma.lesson.update({
       where: { id },
       data: {
-        name: name.trim(),
+        title: title.trim(),
         description: description?.trim() || null,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        classTime: classTime || oldClass.classTime || '19:00',
-        schedule: schedule ? JSON.stringify(schedule) : null,
-        maxStudents: maxStudents ? parseInt(maxStudents) : null,
-        isActive: isActive !== undefined ? isActive : oldClass.isActive
+        scheduledDate: new Date(scheduledDate),
+        duration: duration ? parseInt(duration) : oldLesson.duration,
+        location: location?.trim() || null,
+        isCompleted: isCompleted !== undefined ? isCompleted : oldLesson.isCompleted,
+        notes: notes?.trim() || null
       },
       include: {
-        course: {
+        class: {
           select: {
             id: true,
             name: true,
-            allowsMakeup: true
+            course: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         }
       }
@@ -134,10 +139,10 @@ export async function PUT(
       data: {
         userId: authResult.user.id,
         action: 'UPDATE',
-        tableName: 'classes',
-        recordId: classData.id,
-        oldValues: JSON.stringify(oldClass),
-        newValues: JSON.stringify(classData)
+        tableName: 'lessons',
+        recordId: lesson.id,
+        oldValues: JSON.stringify(oldLesson),
+        newValues: JSON.stringify(lesson)
       }
     });
 
@@ -146,22 +151,22 @@ export async function PUT(
       data: {
         userId: authResult.user.id,
         eventType: 'data_modification',
-        severity: 'low',
-        description: `User updated class: ${classData.name}`,
-        metadata: JSON.stringify({ classId: classData.id }),
+        severity: 'medium',
+        description: `User updated lesson: ${lesson.title}`,
+        metadata: JSON.stringify({ lessonId: lesson.id }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }
     });
 
-    return NextResponse.json({ data: classData });
+    return NextResponse.json({ data: lesson });
   } catch (error) {
-    console.error('Update class error:', error);
+    console.error('Update lesson error:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
 
-// DELETE /api/classes/[id] - Delete a class
+// DELETE /api/lessons/[id] - Delete a lesson
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -173,28 +178,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    // Get class for audit
-    const classData = await prisma.class.findUnique({
-      where: { id },
-      include: {
-        enrollments: true,
-        lessons: true
-      }
+    // Get lesson data before deletion for audit
+    const lesson = await prisma.lesson.findUnique({
+      where: { id }
     });
 
-    if (!classData) {
-      return NextResponse.json({ error: 'Turma não encontrada' }, { status: 404 });
+    if (!lesson) {
+      return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
     }
 
-    // Check if class has enrollments or lessons
-    if (classData.enrollments.length || classData.lessons.length) {
-      return NextResponse.json(
-        { error: 'Não é possível excluir turma com matrículas ou aulas' },
-        { status: 400 }
-      );
-    }
-
-    await prisma.class.delete({
+    // Delete the lesson (this will cascade delete attendance records)
+    await prisma.lesson.delete({
       where: { id }
     });
 
@@ -203,9 +197,9 @@ export async function DELETE(
       data: {
         userId: authResult.user.id,
         action: 'DELETE',
-        tableName: 'classes',
+        tableName: 'lessons',
         recordId: id,
-        oldValues: JSON.stringify(classData)
+        oldValues: JSON.stringify(lesson)
       }
     });
 
@@ -214,17 +208,17 @@ export async function DELETE(
       data: {
         userId: authResult.user.id,
         eventType: 'data_modification',
-        severity: 'medium',
-        description: `User deleted class: ${classData.name}`,
-        metadata: JSON.stringify({ classId: id }),
+        severity: 'high',
+        description: `User deleted lesson: ${lesson.title}`,
+        metadata: JSON.stringify({ lessonId: id }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }
     });
 
-    return NextResponse.json({ data: { success: true } });
+    return NextResponse.json({ message: 'Aula excluída com sucesso' });
   } catch (error) {
-    console.error('Delete class error:', error);
+    console.error('Delete lesson error:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

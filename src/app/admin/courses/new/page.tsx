@@ -12,6 +12,7 @@ interface CourseFormData {
   name: string;
   description: string;
   duration: string;
+  numberOfLessons: string;
   price: string;
   allowsMakeup: boolean;
 }
@@ -23,6 +24,7 @@ export default function NewCourse() {
     name: '',
     description: '',
     duration: '',
+    numberOfLessons: '',
     price: '',
     allowsMakeup: false
   });
@@ -53,6 +55,7 @@ export default function NewCourse() {
           name: formData.name.trim(),
           description: formData.description.trim() || null,
           duration: formData.duration ? parseInt(formData.duration) : null,
+          numberOfLessons: formData.numberOfLessons ? parseInt(formData.numberOfLessons) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           allowsMakeup: formData.allowsMakeup
         }),
@@ -95,7 +98,7 @@ export default function NewCourse() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-4">
             <Button onClick={() => router.push('/admin/courses')} variant="outline" size="sm">
@@ -124,7 +127,7 @@ export default function NewCourse() {
                 </div>
               )}
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
                     Nome do Curso *
@@ -149,6 +152,20 @@ export default function NewCourse() {
                     value={formData.duration}
                     onChange={(e) => handleInputChange('duration', e.target.value)}
                     placeholder="Ex: 40"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="numberOfLessons" className="text-sm font-medium">
+                    Número de Aulas
+                  </label>
+                  <Input
+                    id="numberOfLessons"
+                    type="number"
+                    min="1"
+                    value={formData.numberOfLessons}
+                    onChange={(e) => handleInputChange('numberOfLessons', e.target.value)}
+                    placeholder="Ex: 12"
                   />
                 </div>
               </div>

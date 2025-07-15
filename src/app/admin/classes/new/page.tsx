@@ -17,6 +17,7 @@ import { canManageClasses } from '@/lib/roles';
 interface Course {
   id: string;
   name: string;
+  numberOfLessons?: number;
 }
 
 export default function NewClass() {
@@ -31,9 +32,42 @@ export default function NewClass() {
     courseId: '',
     startDate: '',
     endDate: '',
+    classTime: '19:00',
     maxStudents: '',
     isActive: true
   });
+
+  // Function to calculate end date based on start date and number of lessons
+  const calculateEndDate = (startDate: string, courseId: string): string => {
+    if (!startDate || !courseId) return '';
+
+    const course = courses.find(c => c.id === courseId);
+    if (!course?.numberOfLessons) return '';
+
+    const start = new Date(startDate);
+    // Add (numberOfLessons - 1) weeks to get the end date
+    // Subtract 1 because the first lesson is on the start date
+    const endDate = new Date(start);
+    endDate.setDate(start.getDate() + ((course.numberOfLessons - 1) * 7));
+
+    return endDate.toISOString().split('T')[0];
+  };
+
+  // Handle form data changes with auto-calculation
+  const handleFormChange = (field: string, value: any) => {
+    const newFormData = { ...formData, [field]: value };
+
+    // Auto-calculate end date when start date or course changes
+    if (field === 'startDate' || field === 'courseId') {
+      const endDate = calculateEndDate(
+        field === 'startDate' ? value : formData.startDate,
+        field === 'courseId' ? value : formData.courseId
+      );
+      newFormData.endDate = endDate;
+    }
+
+    setFormData(newFormData);
+  };
 
   const fetchCourses = async () => {
     try {
@@ -115,6 +149,7 @@ export default function NewClass() {
           courseId: formData.courseId,
           startDate: formData.startDate,
           endDate: formData.endDate || null,
+          classTime: formData.classTime,
           maxStudents: formData.maxStudents ? parseInt(formData.maxStudents) : null,
           isActive: formData.isActive
         }),
@@ -162,7 +197,7 @@ export default function NewClass() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <div className="flex items-center space-x-4 mb-8">
           <Button onClick={() => router.push('/admin/classes')} variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -189,7 +224,7 @@ export default function NewClass() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => handleFormChange('name', e.target.value)}
                     placeholder="Ex: Turma A - Manhã"
                     required
                   />
@@ -197,7 +232,7 @@ export default function NewClass() {
 
                 <div className="space-y-2">
                   <Label htmlFor="courseId">Curso *</Label>
-                  <Select value={formData.courseId} onValueChange={(value) => setFormData({ ...formData, courseId: value })}>
+                  <Select value={formData.courseId} onValueChange={(value) => handleFormChange('courseId', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um curso" />
                     </SelectTrigger>
@@ -217,7 +252,7 @@ export default function NewClass() {
                     id="startDate"
                     type="date"
                     value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    onChange={(e) => handleFormChange('startDate', e.target.value)}
                     required
                   />
                 </div>
@@ -228,7 +263,22 @@ export default function NewClass() {
                     id="endDate"
                     type="date"
                     value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    onChange={(e) => handleFormChange('endDate', e.target.value)}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Calculado automaticamente baseado no número de aulas do curso
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="classTime">Horário da Aula</Label>
+                  <Input
+                    id="classTime"
+                    type="time"
+                    value={formData.classTime}
+                    onChange={(e) => handleFormChange('classTime', e.target.value)}
                   />
                 </div>
 
@@ -239,7 +289,7 @@ export default function NewClass() {
                     type="number"
                     min="1"
                     value={formData.maxStudents}
-                    onChange={(e) => setFormData({ ...formData, maxStudents: e.target.value })}
+                    onChange={(e) => handleFormChange('maxStudents', e.target.value)}
                     placeholder="Ex: 20"
                   />
                 </div>
@@ -250,7 +300,7 @@ export default function NewClass() {
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => handleFormChange('description', e.target.value)}
                   placeholder="Descrição da turma..."
                   rows={3}
                 />
@@ -260,7 +310,7 @@ export default function NewClass() {
                 <Switch
                   id="isActive"
                   checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  onCheckedChange={(checked) => handleFormChange('isActive', checked)}
                 />
                 <Label htmlFor="isActive">Turma ativa</Label>
               </div>

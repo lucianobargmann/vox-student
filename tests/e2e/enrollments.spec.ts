@@ -219,19 +219,74 @@ test.describe('Student Enrollments', () => {
     }
   });
 
-  test('should handle enrollment validation errors', async ({ page }) => {
+  test('should create new student during enrollment process', async ({ page }) => {
     await page.goto('/admin/classes');
-    
+
     // Go to first class details
     const firstClassRow = page.locator('table tbody tr').first();
     await firstClassRow.locator('button[title="Ver detalhes"]').click();
-    
+
     // Click on "Matricular Aluno" button
     await page.click('text=Matricular Aluno');
-    
+
+    // Should see the enrollment dialog
+    await expect(page.locator('text=Matricular Aluno')).toBeVisible();
+    await expect(page.locator('text=Busque e selecione o aluno que deseja matricular')).toBeVisible();
+
+    // Click on "Criar Novo" button
+    await page.click('button:has-text("Criar Novo")');
+
+    // Should open the create student dialog
+    await expect(page.locator('text=Criar Novo Aluno')).toBeVisible();
+    await expect(page.locator('text=Preencha as informações do novo aluno')).toBeVisible();
+
+    // Fill in student information
+    const timestamp = Date.now();
+    await page.fill('input[id="name"]', `Novo Aluno E2E ${timestamp}`);
+    await page.fill('input[id="email"]', `novo.aluno.${timestamp}@example.com`);
+    await page.fill('input[id="phone"]', '(11) 98765-4321');
+    await page.fill('input[id="birthDate"]', '1995-05-15');
+    await page.fill('textarea[id="notes"]', 'Aluno criado durante teste E2E');
+
+    // Submit the form
+    await page.click('button:has-text("Criar Aluno")');
+
+    // Should show success message
+    await expect(page.locator('text=Aluno criado com sucesso')).toBeVisible();
+
+    // Should automatically proceed to enrollment details step
+    await expect(page.locator('text=Configure os detalhes da matrícula')).toBeVisible();
+
+    // Should show the newly created student's information
+    await expect(page.locator(`text=Novo Aluno E2E ${timestamp}`)).toBeVisible();
+
+    // Complete the enrollment
+    await page.selectOption('select', 'regular');
+    await page.fill('textarea[placeholder*="Observações"]', 'Matrícula de aluno recém-criado');
+
+    // Submit enrollment
+    await page.click('button:has-text("Matricular")');
+
+    // Should show success message
+    await expect(page.locator('text=Aluno matriculado com sucesso')).toBeVisible();
+
+    // Should see the student in the enrollments table
+    await expect(page.locator('table')).toContainText(`Novo Aluno E2E ${timestamp}`);
+  });
+
+  test('should handle enrollment validation errors', async ({ page }) => {
+    await page.goto('/admin/classes');
+
+    // Go to first class details
+    const firstClassRow = page.locator('table tbody tr').first();
+    await firstClassRow.locator('button[title="Ver detalhes"]').click();
+
+    // Click on "Matricular Aluno" button
+    await page.click('text=Matricular Aluno');
+
     // Try to proceed without selecting a student
     await page.click('button:has-text("Matricular")');
-    
+
     // Should show validation error
     await expect(page.locator('text=Dados incompletos')).toBeVisible();
   });

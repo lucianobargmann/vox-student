@@ -91,7 +91,7 @@ export default function NewReminderTemplate() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <div className="flex items-center space-x-4 mb-8">
           <Button onClick={() => router.push('/admin/reminder-templates')} variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />

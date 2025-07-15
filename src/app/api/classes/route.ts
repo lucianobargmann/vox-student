@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '@/lib/auth';
+import { generateLessonsForClass } from '@/lib/lesson-utils';
 
 const prisma = new PrismaClient();
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { courseId, name, description, startDate, endDate, schedule, maxStudents } = body;
+    const { courseId, name, description, startDate, endDate, classTime, schedule, maxStudents } = body;
 
     if (!courseId) {
       return NextResponse.json(
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest) {
         description: description?.trim() || null,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
+        classTime: classTime || '19:00',
         schedule: schedule ? JSON.stringify(schedule) : null,
         maxStudents: maxStudents ? parseInt(maxStudents) : null
       },
@@ -136,11 +138,22 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            allowsMakeup: true
+            allowsMakeup: true,
+            numberOfLessons: true
           }
         }
       }
     });
+
+    // Generate lessons for the class if course has numberOfLessons defined
+    if (course.numberOfLessons && course.numberOfLessons > 0) {
+      await generateLessonsForClass({
+        classId: classData.id,
+        startDate: new Date(startDate),
+        numberOfLessons: course.numberOfLessons,
+        classTime: classTime || '19:00'
+      });
+    }
 
     // Log audit event
     await prisma.auditLog.create({

@@ -12,6 +12,7 @@ interface CourseFormData {
   name: string;
   description: string;
   duration: string;
+  numberOfLessons: string;
   price: string;
   allowsMakeup: boolean;
   isActive: boolean;
@@ -22,6 +23,7 @@ interface Course {
   name: string;
   description?: string;
   duration?: number;
+  numberOfLessons?: number;
   price?: number;
   allowsMakeup: boolean;
   isActive: boolean;
@@ -36,6 +38,7 @@ export default function EditCourse({ params }: { params: Promise<{ id: string }>
     name: '',
     description: '',
     duration: '',
+    numberOfLessons: '',
     price: '',
     allowsMakeup: false,
     isActive: true
@@ -77,6 +80,7 @@ export default function EditCourse({ params }: { params: Promise<{ id: string }>
         name: courseData.name,
         description: courseData.description || '',
         duration: courseData.duration?.toString() || '',
+        numberOfLessons: courseData.numberOfLessons?.toString() || '',
         price: courseData.price?.toString() || '',
         allowsMakeup: courseData.allowsMakeup,
         isActive: courseData.isActive
@@ -105,6 +109,7 @@ export default function EditCourse({ params }: { params: Promise<{ id: string }>
           name: formData.name.trim(),
           description: formData.description.trim() || null,
           duration: formData.duration ? parseInt(formData.duration) : null,
+          numberOfLessons: formData.numberOfLessons ? parseInt(formData.numberOfLessons) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           allowsMakeup: formData.allowsMakeup,
           isActive: formData.isActive
@@ -195,7 +200,7 @@ export default function EditCourse({ params }: { params: Promise<{ id: string }>
                 </div>
               )}
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
                     Nome do Curso *
@@ -220,6 +225,20 @@ export default function EditCourse({ params }: { params: Promise<{ id: string }>
                     value={formData.duration}
                     onChange={(e) => handleInputChange('duration', e.target.value)}
                     placeholder="Ex: 40"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="numberOfLessons" className="text-sm font-medium">
+                    Número de Aulas
+                  </label>
+                  <Input
+                    id="numberOfLessons"
+                    type="number"
+                    min="1"
+                    value={formData.numberOfLessons}
+                    onChange={(e) => handleInputChange('numberOfLessons', e.target.value)}
+                    placeholder="Ex: 12"
                   />
                 </div>
               </div>

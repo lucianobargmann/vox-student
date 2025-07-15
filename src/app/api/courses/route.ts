@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, duration, price, allowsMakeup } = body;
+    const { name, description, duration, numberOfLessons, price, allowsMakeup } = body;
 
     if (!name || name.trim().length < 2) {
       return NextResponse.json(
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description?.trim() || null,
         duration: duration ? parseInt(duration) : null,
+        numberOfLessons: numberOfLessons ? parseInt(numberOfLessons) : null,
         price: price ? parseFloat(price) : null,
         allowsMakeup: allowsMakeup || false
       }

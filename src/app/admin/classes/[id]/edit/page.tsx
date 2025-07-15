@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { canManageClasses } from '@/lib/roles';
 import { ClassEnrollmentsManager } from '@/components/ClassEnrollmentsManager';
+import { LessonCalendar } from '@/components/LessonCalendar';
 
 interface Course {
   id: string;
@@ -50,6 +51,7 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
     courseId: '',
     startDate: '',
     endDate: '',
+    classTime: '19:00',
     maxStudents: '',
     isActive: true
   });
@@ -103,6 +105,7 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
         courseId: classData.courseId || '',
         startDate: classData.startDate ? classData.startDate.split('T')[0] : '',
         endDate: classData.endDate ? classData.endDate.split('T')[0] : '',
+        classTime: classData.classTime || '19:00',
         maxStudents: classData.maxStudents ? classData.maxStudents.toString() : '',
         isActive: classData.isActive !== undefined ? classData.isActive : true
       });
@@ -153,6 +156,7 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
           courseId: formData.courseId,
           startDate: formData.startDate,
           endDate: formData.endDate || null,
+          classTime: formData.classTime,
           maxStudents: formData.maxStudents ? parseInt(formData.maxStudents) : null,
           isActive: formData.isActive
         }),
@@ -207,7 +211,7 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <div className="flex items-center space-x-4 mb-8">
           <Button onClick={() => router.push('/admin/classes')} variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -278,6 +282,16 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="classTime">Horário da Aula</Label>
+                  <Input
+                    id="classTime"
+                    type="time"
+                    value={formData.classTime}
+                    onChange={(e) => setFormData({ ...formData, classTime: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="maxStudents">Máximo de Alunos</Label>
                   <Input
                     id="maxStudents"
@@ -336,16 +350,27 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
           </CardContent>
         </Card>
 
-        {/* Student Management Section */}
+        {/* Student Management and Lesson Calendar Section */}
         {classData && (
-          <div className="mt-8">
-            <ClassEnrollmentsManager
-              classId={resolvedParams.id}
-              courseId={classData.courseId}
-              className={classData.name}
-              courseName={classData.course?.name || 'Curso'}
-              maxStudents={classData.maxStudents || undefined}
-            />
+          <div className="mt-8 grid gap-8 lg:grid-cols-2">
+            {/* Student Management - Left Side */}
+            <div>
+              <ClassEnrollmentsManager
+                classId={resolvedParams.id}
+                courseId={classData.courseId}
+                className={classData.name}
+                courseName={classData.course?.name || 'Curso'}
+                maxStudents={classData.maxStudents || undefined}
+              />
+            </div>
+
+            {/* Lesson Calendar - Right Side */}
+            <div>
+              <LessonCalendar
+                classId={resolvedParams.id}
+                className={classData.name}
+              />
+            </div>
           </div>
         )}
       </div>
