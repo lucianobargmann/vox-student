@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckSquare, ArrowLeft, Clock, Users, Save, UserCheck, UserX, RotateCcw, Camera, CameraOff, User } from 'lucide-react';
+import { CheckSquare, ArrowLeft, Clock, Users, UserCheck, UserX, RotateCcw, Camera, CameraOff, User, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, use } from 'react';
 import { format } from 'date-fns';
@@ -63,7 +63,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
   const router = useRouter();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent' | 'makeup'>>({});
   const [faceRecognitionActive, setFaceRecognitionActive] = useState(false);
   const [recognizedStudents, setRecognizedStudents] = useState<Set<string>>(new Set());
@@ -121,27 +121,12 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
 
       setAttendanceRecords(records);
 
-      // Debug: Log all student data
-      console.log('=== LESSON DATA DEBUG ===');
-      console.log('All enrollments:', lessonData.class.enrollments);
-      lessonData.class.enrollments.forEach((enrollment: Enrollment, index: number) => {
-        console.log(`Student ${index + 1}:`, {
-          id: enrollment.student.id,
-          name: enrollment.student.name,
-          faceDescriptor: enrollment.student.faceDescriptor ? 'HAS_DATA' : 'NO_DATA',
-          faceDataUpdatedAt: enrollment.student.faceDataUpdatedAt
-        });
-      });
-
       // Auto-start face recognition if students have face data
       const studentsWithFaceData = lessonData.class.enrollments.filter(
         (enrollment: Enrollment) => enrollment.student.faceDescriptor
       );
 
-      console.log(`Found ${studentsWithFaceData.length} students with face data out of ${lessonData.class.enrollments.length} total`);
-
       if (studentsWithFaceData.length > 0) {
-        console.log(`Auto-starting recognition for students:`, studentsWithFaceData.map(e => e.student.name));
         setFaceRecognitionActive(true);
         toast.info(`${studentsWithFaceData.length} alunos com dados faciais encontrados. Reconhecimento iniciado automaticamente.`);
       }
@@ -153,80 +138,35 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
     }
   };
 
-  const updateAttendance = (studentId: string, status: 'present' | 'absent' | 'makeup') => {
+  const updateAttendance = async (studentId: string, status: 'present' | 'absent' | 'makeup') => {
+    // Update local state immediately for UI responsiveness
     setAttendanceRecords(prev => ({
       ...prev,
       [studentId]: status
     }));
+
+    // Auto-save to server
+    await autoSaveAttendance(studentId, status);
   };
 
-  const handleStudentRecognized = async (studentId: string, confidence: number) => {
+  const autoSaveAttendance = async (studentId: string, status: 'present' | 'absent' | 'makeup') => {
     if (!lesson) return;
 
     try {
       const token = localStorage.getItem('auth_token');
-      if (!token) {
-        toast.error('Sessão expirada. Faça login novamente.');
-        return;
-      }
-
-      // Mark attendance via facial recognition API
-      const response = await fetch('/api/face-recognition/mark-attendance', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          studentId,
-          lessonId: lesson.id,
-          confidence: Math.round(confidence * 100)
-        })
-      });
-
-      if (response.ok) {
-        // Update local state
-        updateAttendance(studentId, 'present');
-        setRecognizedStudents(prev => new Set(prev).add(studentId));
-
-        const student = lesson.class.enrollments.find(e => e.student.id === studentId)?.student;
-        toast.success(`${student?.name} marcado como presente automaticamente!`);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Erro ao marcar presença automaticamente');
-      }
-    } catch (error) {
-      console.error('Error marking attendance via face recognition:', error);
-      toast.error('Erro ao marcar presença automaticamente');
-    }
-  };
-
-  const toggleFaceRecognition = () => {
-    setFaceRecognitionActive(!faceRecognitionActive);
-    if (faceRecognitionActive) {
-      setRecognizedStudents(new Set());
-    }
-  };
-
-  const saveAttendance = async () => {
-    if (!lesson) return;
-
-    try {
-      setIsSaving(true);
-      const token = localStorage.getItem('auth_token');
-      
       if (!token) {
         toast.error('Sessão expirada. Faça login novamente.');
         router.push('/login');
         return;
       }
 
-      const attendanceData = Object.entries(attendanceRecords).map(([studentId, status]) => ({
+      // Create attendance record for this specific student
+      const attendanceData = [{
         studentId,
         status
-      }));
+      }];
 
-      const response = await fetch(`/api/attendance`, {
+      const response = await fetch('/api/attendance', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -242,36 +182,54 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
         throw new Error('Falha ao salvar presença');
       }
 
-      toast.success('Presença salva com sucesso!');
-      
-      // Mark lesson as completed if not already
-      if (!lesson.isCompleted) {
-        await fetch(`/api/lessons/${lesson.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            title: lesson.title,
-            description: lesson.description,
-            scheduledDate: lesson.scheduledDate,
-            duration: lesson.duration,
-            location: lesson.location,
-            isCompleted: true,
-            notes: lesson.notes
-          })
-        });
-      }
+      // Show success feedback
+      const student = lesson.class.enrollments.find(e => e.student.id === studentId)?.student;
+      const statusText = status === 'present' ? 'Presente' : status === 'absent' ? 'Ausente' : 'Reposição';
+      toast.success(`${student?.name}: ${statusText} salvo automaticamente`);
 
-      router.push('/admin/attendance');
     } catch (error) {
-      console.error('Error saving attendance:', error);
-      toast.error('Erro ao salvar presença');
-    } finally {
-      setIsSaving(false);
+      console.error('Error auto-saving attendance:', error);
+      toast.error('Erro ao salvar presença automaticamente');
+
+      // Revert the local state change on error
+      setAttendanceRecords(prev => {
+        const reverted = { ...prev };
+        // Find the original status from lesson data
+        const originalAttendance = lesson.attendance.find(a => a.student.id === studentId);
+        if (originalAttendance) {
+          reverted[studentId] = originalAttendance.status;
+        } else {
+          reverted[studentId] = 'absent'; // default
+        }
+        return reverted;
+      });
     }
   };
+
+  const handleStudentRecognized = async (studentId: string, confidence: number) => {
+    if (!lesson) return;
+
+    // Use the new auto-save system
+    await updateAttendance(studentId, 'present');
+
+    // Add to recognized students set
+    setRecognizedStudents(prev => new Set(prev).add(studentId));
+
+    // Show success message with confidence
+    const student = lesson.class.enrollments.find(e => e.student.id === studentId)?.student;
+    if (student) {
+      toast.success(`${student.name} reconhecido automaticamente (${Math.round(confidence * 100)}% confiança)`);
+    }
+  };
+
+  const toggleFaceRecognition = () => {
+    setFaceRecognitionActive(!faceRecognitionActive);
+    if (faceRecognitionActive) {
+      setRecognizedStudents(new Set());
+    }
+  };
+
+
 
   if (loading || isLoading) {
     return (
@@ -520,19 +478,13 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
                 variant="outline"
                 onClick={() => router.push('/admin/attendance')}
               >
-                Cancelar
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
               </Button>
-              <Button
-                onClick={saveAttendance}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Salvar Presença
-              </Button>
+              <div className="flex items-center text-sm text-green-600">
+                <Check className="w-4 h-4 mr-1" />
+                Salvamento automático ativo
+              </div>
             </div>
           </CardContent>
         </Card>

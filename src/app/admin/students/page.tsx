@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { canManageStudents } from '@/lib/roles';
 import { FaceRegistration } from '@/components/FaceRegistration';
-import { FaceApiTest } from '@/components/FaceApiTest';
+
 import { useEffect, useState } from 'react';
 
 interface Student {
@@ -230,10 +230,7 @@ export default function StudentsManagement() {
           </Button>
         </div>
 
-        {/* Temporary Face-API Test */}
-        <div className="mb-6">
-          <FaceApiTest />
-        </div>
+
 
         {/* Search */}
         <Card className="mb-6">
