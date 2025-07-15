@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { verifyAuth } from '@/lib/auth';
+import { generateLessonsForClass } from '@/lib/lesson-utils';
 
 const prisma = new PrismaClient();
 
@@ -99,7 +100,15 @@ export async function PUT(
 
     // Get old values for audit
     const oldClass = await prisma.class.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        course: {
+          select: {
+            numberOfLessons: true
+          }
+        },
+        lessons: true
+      }
     });
 
     if (!oldClass) {
@@ -123,11 +132,24 @@ export async function PUT(
           select: {
             id: true,
             name: true,
-            allowsMakeup: true
+            allowsMakeup: true,
+            numberOfLessons: true
           }
         }
       }
     });
+
+    // Generate lessons if the class has no lessons and the course has numberOfLessons defined
+    if (oldClass.lessons.length === 0 &&
+        classData.course.numberOfLessons &&
+        classData.course.numberOfLessons > 0) {
+      await generateLessonsForClass({
+        classId: classData.id,
+        startDate: new Date(startDate),
+        numberOfLessons: classData.course.numberOfLessons,
+        classTime: classTime || oldClass.classTime || '19:00'
+      });
+    }
 
     // Log audit event
     await prisma.auditLog.create({

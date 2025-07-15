@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, Users, CheckCircle, Circle, MoreHorizontal } from 'lucide-react';
+import { Calendar, Clock, Users, CheckCircle, Circle, MoreHorizontal, Plus, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -46,6 +46,7 @@ interface LessonCalendarProps {
 export function LessonCalendar({ classId, className, onAttendanceClick }: LessonCalendarProps) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generatingLessons, setGeneratingLessons] = useState(false);
 
   useEffect(() => {
     loadLessons();
@@ -147,6 +148,43 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
     return format(new Date(dateString), "EEEE", { locale: ptBR });
   };
 
+  const generateLessons = async (force: boolean = false) => {
+    try {
+      setGeneratingLessons(true);
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const response = await fetch(`/api/classes/${classId}/generate-lessons`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ force })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Falha ao gerar aulas');
+      }
+
+      toast.success(result.message);
+
+      // Reload lessons after generation
+      await loadLessons();
+    } catch (error: any) {
+      console.error('Error generating lessons:', error);
+      toast.error(error.message || 'Erro ao gerar aulas');
+    } finally {
+      setGeneratingLessons(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -171,9 +209,26 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Calendar className="w-5 h-5 mr-2" />
-          Calendário de Aulas
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Calendar className="w-5 h-5 mr-2" />
+            Calendário de Aulas
+          </div>
+          {lessons.length > 0 && (
+            <Button
+              onClick={() => generateLessons(true)}
+              disabled={generatingLessons}
+              variant="outline"
+              size="sm"
+            >
+              {generatingLessons ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Regenerar
+            </Button>
+          )}
         </CardTitle>
         <CardDescription>
           {lessons.length} aulas programadas para {className}
@@ -184,9 +239,21 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
           <div className="text-center py-8">
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhuma aula encontrada</h3>
-            <p className="text-muted-foreground">
-              As aulas serão geradas automaticamente quando o curso tiver o número de aulas definido.
+            <p className="text-muted-foreground mb-4">
+              As aulas podem ser geradas automaticamente baseadas no curso.
             </p>
+            <Button
+              onClick={() => generateLessons(false)}
+              disabled={generatingLessons}
+              className="mx-auto"
+            >
+              {generatingLessons ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
+              Gerar Aulas
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">

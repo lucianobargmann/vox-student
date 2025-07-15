@@ -122,7 +122,7 @@ export async function getTodaysLessons() {
   const today = new Date();
   const startOfDay = new Date(today);
   startOfDay.setHours(0, 0, 0, 0);
-  
+
   const endOfDay = new Date(today);
   endOfDay.setHours(23, 59, 59, 999);
 
@@ -172,4 +172,44 @@ export async function getTodaysLessons() {
     },
     orderBy: { scheduledDate: 'asc' }
   });
+}
+
+/**
+ * Check if a class needs lessons generated and generate them if needed
+ * This function checks if the class has no lessons and the course has numberOfLessons defined
+ */
+export async function ensureLessonsForClass(classId: string) {
+  // Get class with course and existing lessons
+  const classData = await prisma.class.findUnique({
+    where: { id: classId },
+    include: {
+      course: {
+        select: {
+          numberOfLessons: true
+        }
+      },
+      lessons: true
+    }
+  });
+
+  if (!classData) {
+    throw new Error('Turma não encontrada');
+  }
+
+  // Generate lessons if the class has no lessons and the course has numberOfLessons defined
+  if (classData.lessons.length === 0 &&
+      classData.course.numberOfLessons &&
+      classData.course.numberOfLessons > 0) {
+
+    await generateLessonsForClass({
+      classId: classData.id,
+      startDate: classData.startDate,
+      numberOfLessons: classData.course.numberOfLessons,
+      classTime: classData.classTime || '19:00'
+    });
+
+    return true; // Lessons were generated
+  }
+
+  return false; // No lessons were generated
 }
