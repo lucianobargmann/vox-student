@@ -369,6 +369,7 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
               <LessonCalendar
                 classId={resolvedParams.id}
                 className={classData.name}
+                onAttendanceClick={(lessonId) => router.push(`/admin/attendance/${lessonId}`)}
               />
             </div>
           </div>

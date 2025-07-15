@@ -50,10 +50,10 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 
 | Funcionalidade | Status | Descrição | Arquivos Relacionados |
 |----------------|--------|-----------|----------------------|
-| **Lista de Turmas do Dia** | ❌ | Interface para marcar presença | - |
-| **Reconhecimento Facial** | ❌ | Presença via webcam (face-api.js) | - |
-| **Feedback Sonoro** | ❌ | Sons de sucesso/erro | - |
-| **Presença Manual** | ❌ | Marcação manual como fallback | - |
+| **Lista de Turmas do Dia** | ✅ | Interface para marcar presença | - |
+| **Reconhecimento Facial** | ✅ | Presença via webcam (face-api.js) | - |
+| **Feedback Sonoro** | ✅ | Sons de sucesso/erro | - |
+| **Presença Manual** | ✅ | Marcação manual como fallback | - |
 | **Indicador de Reposição** | ❌ | Mostrar alunos em reposição | - |
 | **Filtros** | ❌ | Busca por curso, turma, data | - |
 

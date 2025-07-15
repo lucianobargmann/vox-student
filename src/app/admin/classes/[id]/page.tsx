@@ -7,14 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Edit, 
-  Calendar, 
-  Users, 
+import {
+  ArrowLeft,
+  Edit,
+  Calendar,
+  Users,
   BookOpen,
   Clock,
-  Loader2
+  Loader2,
+  CheckSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClassEnrollmentsManager } from '@/components/ClassEnrollmentsManager';
@@ -309,7 +310,7 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
                         key={lesson.id}
                         className="flex items-center justify-between p-4 border rounded-lg"
                       >
-                        <div>
+                        <div className="flex-1">
                           <div className="font-medium">{lesson.title}</div>
                           <div className="text-sm text-muted-foreground">
                             {formatDateTime(lesson.scheduledDate)}
@@ -318,13 +319,23 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={lesson.isCompleted ? 'default' : 'outline'}>
-                            {lesson.isCompleted ? 'Concluída' : 'Pendente'}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {lesson._count.attendance} presença{lesson._count.attendance !== 1 ? 's' : ''}
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={lesson.isCompleted ? 'default' : 'outline'}>
+                              {lesson.isCompleted ? 'Concluída' : 'Pendente'}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {lesson._count.attendance} presença{lesson._count.attendance !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/admin/attendance/${lesson.id}`)}
+                          >
+                            <CheckSquare className="w-4 h-4 mr-1" />
+                            Presença
+                          </Button>
                         </div>
                       </div>
                     ))}

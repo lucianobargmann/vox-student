@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckSquare, ArrowLeft, Clock, Users, UserCheck, UserX, RotateCcw, Camera, CameraOff, User, Check } from 'lucide-react';
+import { CheckSquare, ArrowLeft, Clock, Users, UserCheck, UserX, RotateCcw, Camera, CameraOff, User, Check, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, use } from 'react';
 import { format } from 'date-fns';
