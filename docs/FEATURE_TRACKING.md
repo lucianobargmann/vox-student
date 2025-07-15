@@ -28,10 +28,10 @@ Este documento rastreia o progresso de implementação das funcionalidades do Vo
 | Funcionalidade | Status | Descrição | Arquivos Relacionados |
 |----------------|--------|-----------|----------------------|
 | **Cursos** | ✅ | Cadastro de cursos com flag de reposição | `src/app/api/courses/`, `src/app/admin/courses/` |
-| **Tipos de Lembrete** | ❌ | Templates de mensagens personalizáveis | `src/app/api/reminder-templates/`, `src/app/admin/reminder-templates/` |
+| **Tipos de Lembrete** | ✅ | Templates de mensagens personalizáveis | `src/app/api/reminder-templates/`, `src/app/admin/reminder-templates/` |
 | **Turmas** | ✅ | Gestão de turmas com horários e datas | `src/app/api/classes/`, `src/app/admin/classes/` |
 | **Alunos** | ✅ | Cadastro de alunos com dados pessoais | `src/app/api/students/`, `src/app/admin/students/` |
-| **Usuários** | ❌ | Sistema de usuários (Admin/Professor/Aluno) | `prisma/schema.prisma` |
+| **Usuários** | ✅ | Sistema de usuários (SuperAdmin/Admin/Aluno) | `prisma/schema.prisma` |
 
 ---
 

@@ -20,8 +20,7 @@ import {
   Users,
   BarChart3,
   Settings,
-  Play,
-  Pause
+  Play
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -179,6 +178,7 @@ export default function WhatsAppAdmin() {
     }
   };
 
+  /* Função de desabilitar escondida para usuários normais
   const handleDisableWhatsApp = async () => {
     try {
       console.log('🔍 Frontend: Desabilitando WhatsApp...');
@@ -207,6 +207,7 @@ export default function WhatsAppAdmin() {
       toast.error(error instanceof Error ? error.message : 'Erro ao desabilitar WhatsApp');
     }
   };
+  */
 
   const handleSendTestMessage = async () => {
     if (!testMessage.phoneNumber || !testMessage.message) {
@@ -397,6 +398,7 @@ export default function WhatsAppAdmin() {
                             <CheckCircle className="w-4 h-4 mr-2" />
                             Verificar Conexão
                           </Button>
+                          {/* Botões especiais escondidos para usuários normais
                           <Button
                             size="sm"
                             variant="outline"
@@ -414,6 +416,7 @@ export default function WhatsAppAdmin() {
                             <Pause className="w-4 h-4 mr-2" />
                             Desabilitar
                           </Button>
+                          */}
                         </>
                       )}
                     </div>

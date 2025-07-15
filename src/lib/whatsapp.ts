@@ -30,10 +30,6 @@ class WhatsAppService {
   private readonly RATE_LIMIT_MS = 30 * 1000; // 30 seconds
 
   constructor() {
-    const timestamp = new Date().toISOString();
-    console.log(`🔍 Construtor do serviço WhatsApp chamado em ${timestamp}`);
-    console.log('🔍 Stack trace do construtor:', new Error().stack?.split('\n').slice(1, 4));
-    
     // Initialize on server startup if we have an authenticated session
     this.initializeIfPreviouslyAuthenticated();
   }
@@ -57,33 +53,16 @@ class WhatsAppService {
       const hasPhysicalSession = fs.existsSync(sessionPath) && 
                                  fs.existsSync(path.join(sessionPath, 'Default', 'Preferences'));
       
-      console.log('🔍 Verificando sessão anterior:', {
-        hasSettings: !!settings,
-        isDBAuthenticated: settings?.isAuthenticated,
-        isEnabled: settings?.enabled,
-        hasPhysicalSession,
-        sessionPath,
-        shouldAutoInit: (isDBAuthenticated || hasPhysicalSession) && settings?.enabled
-      });
-
       // Initialize if we have either DB authentication or physical session AND WhatsApp is enabled
       const shouldInitialize = (isDBAuthenticated || hasPhysicalSession) && settings?.enabled;
 
       if (shouldInitialize) {
-        if (!isDBAuthenticated && hasPhysicalSession) {
-          console.log('🔧 Sessão física encontrada mas DB não atualizado, tentando reconectar e sincronizar...');
-        } else {
-          console.log('✅ Sessão autenticada encontrada, iniciando reconexão automática...');
-        }
-        
         // Use setTimeout to avoid blocking the constructor
         setTimeout(() => {
           this.restart().catch(error => {
             console.error('❌ Falha na reconexão automática:', error);
           });
         }, 1000); // Wait 1 second before attempting reconnection
-      } else {
-        console.log('ℹ️ Nenhuma sessão válida encontrada ou WhatsApp desabilitado, aguardando inicialização manual');
       }
     } catch (error) {
       console.error('❌ Erro ao verificar sessão anterior:', error);
@@ -92,22 +71,15 @@ class WhatsAppService {
 
   private async initializeClient(): Promise<void> {
     if (this.isInitializing || this.client) {
-      console.log('🔍 Pulando inicialização - já inicializando ou cliente existe:', {
-        isInitializing: this.isInitializing,
-        hasClient: !!this.client
-      });
       return;
     }
 
-    console.log('🔍 Iniciando inicialização do cliente WhatsApp...');
     this.isInitializing = true;
 
     try {
       // Check if WhatsApp is enabled in settings
       const isEnabled = await this.isWhatsAppEnabled();
-      console.log('🔍 Verificação WhatsApp habilitado:', isEnabled);
       if (!isEnabled) {
-        console.log('📱 Integração WhatsApp está desabilitada');
         this.isInitializing = false;
         return;
       }
@@ -258,12 +230,6 @@ class WhatsAppService {
   private async isWhatsAppEnabled(): Promise<boolean> {
     try {
       const settings = await prisma.whatsAppSettings.findFirst();
-      console.log('🔍 Configurações WhatsApp do banco:', {
-        enabled: settings?.enabled,
-        isAuthenticated: settings?.isAuthenticated,
-        phoneNumber: settings?.phoneNumber,
-        lastCheck: settings?.lastConnectionCheck
-      });
       return settings?.enabled || false;
     } catch (error) {
       console.error('Erro ao verificar configurações WhatsApp:', error);
@@ -304,30 +270,18 @@ class WhatsAppService {
       const globalInstance = getWhatsAppServiceInstance();
       const isThisInstanceActive = globalInstance === this;
       
-      console.log('🔍 sendMessage chamado - Estado:', {
-        isReady: this.isReady,
-        hasClient: !!this.client,
-        isInitializing: this.isInitializing,
-        isActiveInstance: isThisInstanceActive,
-        globalInstanceReady: globalInstance.isReady,
-        globalHasClient: !!globalInstance.client
-      });
-      
       // If this is not the active instance, delegate to the active one
       if (!isThisInstanceActive && globalInstance.isReady) {
-        console.log('🔍 Delegando para instância global ativa...');
         return globalInstance.sendMessage(messageData);
       }
       
       // If this is not ready but global instance is, sync state
       if (!this.isReady && globalInstance.isReady) {
-        console.log('🔍 Sincronizando estado antes de enviar...');
         this.isReady = globalInstance.isReady;
         this.client = globalInstance.client;
       }
       
       if (!this.isReady || !this.client) {
-        console.log('❌ Cliente não está pronto para enviar mensagem');
         return {
           success: false,
           error: 'Cliente WhatsApp não está pronto. Certifique-se de que esteja inicializado e autenticado.'
@@ -346,8 +300,8 @@ class WhatsAppService {
         };
       }
 
-      // Try sending message with Brazil 9-digit fallback logic
-      const result = await this.sendMessageWithBrazilFallback(messageData);
+      // Try sending message with international phone number formatting
+      const result = await this.sendMessageWithInternationalFallback(messageData);
       
       if (result.success) {
         // Update rate limiting only on success
@@ -395,22 +349,13 @@ class WhatsAppService {
     }
   }
 
-  private async sendMessageWithBrazilFallback(messageData: WhatsAppMessage): Promise<SendMessageResult> {
-    // Get both possible formats for Brazilian numbers
-    const phoneFormats = this.getBrazilianPhoneFormats(messageData.to);
+  private async sendMessageWithInternationalFallback(messageData: WhatsAppMessage): Promise<SendMessageResult> {
+    // Get phone formats with international and Brazilian fallback logic
+    const phoneFormats = this.getInternationalPhoneFormats(messageData.to);
     
-    console.log('📱 Tentando envio com fallback brasileiro:', {
-      original: messageData.to,
-      primaryFormat: phoneFormats.primary,
-      fallbackFormat: phoneFormats.fallback
-    });
-
     // Try primary format first
     try {
-      console.log('🔄 Tentativa 1: formato primário', phoneFormats.primary);
       const message = await this.client!.sendMessage(phoneFormats.primary, messageData.message);
-      
-      console.log('✅ Mensagem enviada com sucesso no formato primário:', message.id.id);
 
       // Log the successful message to database
       await this.logMessage({
@@ -428,15 +373,10 @@ class WhatsAppService {
       };
 
     } catch (primaryError) {
-      console.log('⚠️ Falha no formato primário, tentando fallback...', primaryError);
-
       // If primary fails and we have a fallback, try it
       if (phoneFormats.fallback && phoneFormats.fallback !== phoneFormats.primary) {
         try {
-          console.log('🔄 Tentativa 2: formato fallback', phoneFormats.fallback);
           const message = await this.client!.sendMessage(phoneFormats.fallback, messageData.message);
-          
-          console.log('✅ Mensagem enviada com sucesso no formato fallback:', message.id.id);
 
           // Log the successful message to database with fallback format
           await this.logMessage({
@@ -454,12 +394,7 @@ class WhatsAppService {
           };
 
         } catch (fallbackError) {
-          console.error('❌ Falha em ambos os formatos:', {
-            primaryError: primaryError instanceof Error ? primaryError.message : primaryError,
-            fallbackError: fallbackError instanceof Error ? fallbackError.message : fallbackError
-          });
-
-          const errorMessage = `Falha em ambos os formatos de número brasileiro. Primário: ${primaryError instanceof Error ? primaryError.message : primaryError}. Fallback: ${fallbackError instanceof Error ? fallbackError.message : fallbackError}`;
+          const errorMessage = `Falha em ambos os formatos. Primário: ${primaryError instanceof Error ? primaryError.message : primaryError}. Fallback: ${fallbackError instanceof Error ? fallbackError.message : fallbackError}`;
 
           // Log the failed message to database
           await this.logMessage({
@@ -476,8 +411,6 @@ class WhatsAppService {
           };
         }
       } else {
-        console.error('❌ Falha no formato primário e sem fallback disponível:', primaryError);
-        
         const errorMessage = primaryError instanceof Error ? primaryError.message : 'Erro desconhecido';
 
         // Log the failed message to database
@@ -497,15 +430,19 @@ class WhatsAppService {
     }
   }
 
-  private getBrazilianPhoneFormats(phoneNumber: string): { primary: string; fallback?: string } {
+  private getInternationalPhoneFormats(phoneNumber: string): { primary: string; fallback?: string } {
+    const originalHasPlus = phoneNumber.startsWith('+');
+    
     // Remove all non-numeric characters
     let cleaned = phoneNumber.replace(/\D/g, '');
 
-    console.log('🔍 Analisando número brasileiro:', {
-      original: phoneNumber,
-      cleaned: cleaned,
-      length: cleaned.length
-    });
+    // Simple rule: + prefix = international, no + = Brazil
+    if (originalHasPlus) {
+      // International number with country code - use as-is
+      return {
+        primary: cleaned + '@c.us'
+      };
+    }
 
     // Handle Brazilian numbers with fallback logic
     if (cleaned.startsWith('55')) {
@@ -522,7 +459,6 @@ class WhatsAppService {
           const numberWith9 = cleaned + '@c.us';
           const numberWithout9 = '55' + areaCode + withoutCountryCode.substring(3) + '@c.us';
           
-          console.log('📱 Número com 9º dígito - tentará SEM 9 primeiro (contas antigas BR), fallback com 9');
           return {
             primary: numberWithout9,
             fallback: numberWith9
@@ -532,7 +468,6 @@ class WhatsAppService {
           const numberWith9 = '55' + areaCode + '9' + withoutCountryCode.substring(2) + '@c.us';
           const numberWithout9 = cleaned + '@c.us';
           
-          console.log('📱 Número sem 9º dígito - tentará com 9 primeiro, fallback sem 9');
           return {
             primary: numberWith9,
             fallback: numberWithout9
@@ -545,7 +480,6 @@ class WhatsAppService {
         const numberWith9 = '55' + areaCode + '9' + number + '@c.us';
         const numberWithout9 = cleaned + '@c.us';
         
-        console.log('📱 Número 10 dígitos - tentará com 9 primeiro, fallback sem 9');
         return {
           primary: numberWith9,
           fallback: numberWithout9
@@ -563,7 +497,6 @@ class WhatsAppService {
           const numberWith9 = '55' + cleaned + '@c.us';
           const numberWithout9 = '55' + areaCode + cleaned.substring(3) + '@c.us';
           
-          console.log('📱 Número 11 dígitos com 9 - tentará SEM 9 primeiro (contas antigas BR), fallback com 9');
           return {
             primary: numberWithout9,
             fallback: numberWith9
@@ -573,7 +506,6 @@ class WhatsAppService {
           const numberWith9 = '55' + areaCode + '9' + cleaned.substring(2) + '@c.us';
           const numberWithout9 = '55' + cleaned + '@c.us';
           
-          console.log('📱 Número 11 dígitos sem 9 - tentará com 9 primeiro, fallback sem 9');
           return {
             primary: numberWith9,
             fallback: numberWithout9
@@ -586,7 +518,6 @@ class WhatsAppService {
         const numberWith9 = '55' + areaCode + '9' + number + '@c.us';
         const numberWithout9 = '55' + cleaned + '@c.us';
         
-        console.log('📱 Número 10 dígitos - tentará com 9 primeiro, fallback sem 9');
         return {
           primary: numberWith9,
           fallback: numberWithout9
@@ -595,7 +526,6 @@ class WhatsAppService {
     }
 
     // Fallback: return as-is with @c.us (no fallback)
-    console.log('⚠️ Formato não reconhecido, usando como está sem fallback');
     return {
       primary: cleaned + '@c.us'
     };
@@ -674,18 +604,9 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
     // Check if this is the active instance by trying to sync with global state
     const globalInstance = getWhatsAppServiceInstance();
     const isThisInstanceActive = globalInstance === this;
-    
-    console.log('🔍 Verificação de instância:', {
-      isThisInstanceActive,
-      thisInstanceReady: this.isReady,
-      globalInstanceReady: globalInstance.isReady,
-      thisHasClient: !!this.client,
-      globalHasClient: !!globalInstance.client
-    });
 
     // If this is not the active instance but we have a ready global instance, sync the state
     if (!isThisInstanceActive && globalInstance.isReady && !this.isReady) {
-      console.log('🔍 Sincronizando com instância global ativa...');
       this.isReady = globalInstance.isReady;
       this.isInitializing = globalInstance.isInitializing;
       this.client = globalInstance.client;
@@ -699,21 +620,10 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
       try {
         const settings = await prisma.whatsAppSettings.findFirst();
         qrCode = settings?.qrCode || null;
-        console.log('🔍 QR code buscado do banco:', qrCode ? 'EXISTE' : 'NULO');
       } catch (error) {
         console.error('Falha ao buscar QR code do banco:', error);
       }
     }
-
-    console.log('🔍 Resultado getConnectionStatus:', {
-      isReady: this.isReady,
-      isInitializing: this.isInitializing,
-      qrCodeDaMemoria: this.qrCode ? 'EXISTE' : 'NULO',
-      qrCodeFinal: qrCode ? 'EXISTE' : 'NULO',
-      hasClient: !!this.client,
-      clientState: this.client?.info ? 'conectado' : 'desconectado',
-      isActiveInstance: isThisInstanceActive
-    });
 
     return {
       isReady: this.isReady,
@@ -730,10 +640,8 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
 
       // Try to get client info to verify connection
       const info = await this.client.info;
-      console.log('✅ Conexão WhatsApp verificada:', info.wid.user);
       return true;
     } catch (error) {
-      console.error('❌ WhatsApp connection verification failed:', error);
       return false;
     }
   }
@@ -746,7 +654,6 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
         this.isReady = false;
         this.isInitializing = false;
         this.qrCode = null;
-        console.log('✅ Cliente WhatsApp desconectado');
       }
     } catch (error) {
       console.error('❌ Falha ao desconectar cliente WhatsApp:', error);
@@ -754,8 +661,6 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
   }
 
   async restart(): Promise<void> {
-    console.log('🔍 Verificando status do serviço WhatsApp...');
-    
     // Check if we already have an authenticated session
     const settings = await prisma.whatsAppSettings.findFirst();
     const isDBAuthenticated = settings?.isAuthenticated && settings?.enabled;
@@ -770,57 +675,43 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
     const shouldAttemptReconnect = (isDBAuthenticated || hasPhysicalSession) && settings?.enabled;
     
     if (shouldAttemptReconnect) {
-      console.log('🔍 Sessão encontrada, tentando reconectar...', {
-        isDBAuthenticated,
-        hasPhysicalSession,
-        isEnabled: settings?.enabled
-      });
-      
       try {
         // If we already have a client, try to verify connection first
         if (this.client) {
           const isConnected = await this.verifyConnection();
           if (isConnected) {
-            console.log('✅ Conexão já está ativa, não é necessário reiniciar');
             this.isReady = true;
             return;
           }
           
           // If verification fails, try to reinitialize without destroying session
-          console.log('🔍 Tentando reinicializar cliente existente...');
           try {
             await this.client.initialize();
             return;
           } catch (reinitError) {
-            console.log('⚠️ Falha na reinicialização, tentando restart completo...');
+            // Continue to full restart
           }
         }
         
         // If no client exists or reinit failed, do full restart
-        console.log('🔍 Iniciando cliente do zero...');
         await this.fullRestart();
         
       } catch (error) {
-        console.error('❌ Falha na reconexão, fazendo restart completo...', error);
+        console.error('❌ Falha na reconexão:', error);
         await this.fullRestart();
       }
     } else {
-      console.log('🔍 Nenhuma sessão válida encontrada ou WhatsApp desabilitado, fazendo restart completo...');
       await this.fullRestart();
     }
   }
 
   async forceRestart(): Promise<void> {
-    console.log('🔍 Forçando restart completo do serviço WhatsApp...');
     await this.fullRestart();
   }
 
   private async fullRestart(): Promise<void> {
-    console.log('🔍 Fazendo restart completo do serviço WhatsApp...');
     await this.disconnect();
-    console.log('🔍 Desconectado, agora inicializando...');
     await this.initializeClient();
-    console.log('🔍 Restart completo finalizado');
   }
 
   getRateLimitInfo(phoneNumber: string): RateLimitInfo {
@@ -835,10 +726,7 @@ function getWhatsAppServiceInstance(): WhatsAppService {
   const globalSymbols = globalThis as any;
   
   if (!globalSymbols[WHATSAPP_SERVICE_SYMBOL]) {
-    console.log('🔍 Criando NOVA instância singleton global do WhatsApp Service');
     globalSymbols[WHATSAPP_SERVICE_SYMBOL] = new WhatsAppService();
-  } else {
-    console.log('🔍 Reutilizando instância singleton EXISTENTE do WhatsApp Service');
   }
   
   return globalSymbols[WHATSAPP_SERVICE_SYMBOL];
