@@ -84,6 +84,15 @@ class WhatsAppService {
         return;
       }
 
+      // Clean up any stale singleton files before initializing
+      await this.cleanupSingletonFiles();
+
+      // Check if Chrome is available
+      const chromePath = await this.findChromeBinary();
+      if (!chromePath) {
+        throw new Error('Chrome não encontrado. WhatsApp não pode ser inicializado em ambiente headless sem Chrome. Execute ./install-chrome.sh para instalar.');
+      }
+
       this.client = new Client({
         authStrategy: new LocalAuth({
           clientId: 'voxstudent-whatsapp',
@@ -91,7 +100,7 @@ class WhatsAppService {
         }),
         puppeteer: {
           headless: true,
-          executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+          executablePath: chromePath,
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -103,7 +112,18 @@ class WhatsAppService {
             '--disable-gpu',
             '--disable-background-timer-throttling',
             '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding'
+            '--disable-renderer-backgrounding',
+            '--disable-features=VizDisplayCompositor',
+            '--disable-web-security',
+            '--disable-extensions',
+            '--disable-plugins',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--metrics-recording-only',
+            '--no-crash-upload',
+            '--disable-crash-reporter',
+            '--user-data-dir=/tmp/chrome-data-whatsapp',
+            '--remote-debugging-port=0'
           ]
         }
       });
@@ -640,7 +660,7 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
 
       // Try to get client info to verify connection
       const info = await this.client.info;
-      return true;
+      return info !== null;
     } catch (error) {
       return false;
     }
@@ -710,8 +730,83 @@ Se você não solicitou este acesso, pode ignorar esta mensagem com segurança.
   }
 
   private async fullRestart(): Promise<void> {
-    await this.disconnect();
-    await this.initializeClient();
+    try {
+      await this.disconnect();
+      
+      // Clean up any stale singleton files that might cause issues
+      await this.cleanupSingletonFiles();
+      
+      await this.initializeClient();
+    } catch (error) {
+      console.error('❌ Erro durante reinício completo:', error);
+      throw error;
+    }
+  }
+
+  private async findChromeBinary(): Promise<string | undefined> {
+    // Check environment variable first
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      return process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+
+    try {
+      const fs = await import('fs');
+      
+      // Common Chrome paths on Linux
+      const chromePaths = [
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/bin/chromium'
+      ];
+
+      for (const path of chromePaths) {
+        if (fs.existsSync(path)) {
+          console.log(`✅ Chrome encontrado em: ${path}`);
+          return path;
+        }
+      }
+
+      console.log('⚠️ Chrome não encontrado. Execute ./install-chrome.sh para instalar');
+      return undefined;
+    } catch (error) {
+      console.log('⚠️ Erro ao procurar Chrome:', error);
+      return undefined;
+    }
+  }
+
+  private async cleanupSingletonFiles(): Promise<void> {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const sessionPath = path.join(process.cwd(), 'whatsapp-session', 'session-voxstudent-whatsapp');
+      
+      const filesToClean = [
+        path.join(sessionPath, 'SingletonLock'),
+        path.join(sessionPath, 'SingletonCookie'),
+        path.join(sessionPath, 'SingletonSocket'),
+        path.join(sessionPath, 'DevToolsActivePort')
+      ];
+      
+      for (const file of filesToClean) {
+        if (fs.existsSync(file)) {
+          try {
+            if (fs.lstatSync(file).isSymbolicLink()) {
+              fs.unlinkSync(file);
+            } else {
+              fs.rmSync(file, { recursive: true, force: true });
+            }
+          } catch (cleanError) {
+            // Ignore individual file cleanup errors
+          }
+        }
+      }
+    } catch (error) {
+      // Cleanup is best effort, don't fail the restart
+      console.log('⚠️ Aviso: Não foi possível limpar arquivos temporários');
+    }
   }
 
   getRateLimitInfo(phoneNumber: string): RateLimitInfo {

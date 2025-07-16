@@ -8,6 +8,7 @@ import { loadFaceApiModels, faceapi, getFaceDetectionOptions, FACE_MATCH_THRESHO
 import { toast } from 'sonner';
 import { playSuccessSound, playErrorSound, playRecognitionSound } from '@/lib/audio-feedback';
 import { FeedbackOverlay, useFeedbackMessages, RecognitionIndicator } from '@/components/FeedbackOverlay';
+import { stopCameraCompletely } from '@/lib/camera-utils';
 
 interface Student {
   id: string;
@@ -157,16 +158,20 @@ export function FaceRecognition({
 
   // Stop camera
   const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
+    console.log('Stopping face recognition camera...');
+
+    // Use utility function for complete camera cleanup
+    stopCameraCompletely(streamRef.current, videoRef.current);
+
+    // Clear refs
+    streamRef.current = null;
+
+    // Update state
     setIsCameraActive(false);
     setShowVideo(false);
     setCurrentMatch(null);
+    setFaceDetected(false);
+    console.log('Face recognition camera stopped');
   }, []);
 
   // Recognize faces in video stream
@@ -229,7 +234,7 @@ export function FaceRecognition({
                 };
 
                 // Auto-recognize if confidence is high enough
-                if (confidence > 0.7 && !recognizedStudents.has(student.id)) {
+                if (confidence > 0.5 && !recognizedStudents.has(student.id)) {
                   // Check if student is already marked as present
                   const currentAttendance = attendanceRecords[student.id];
 
@@ -298,10 +303,18 @@ export function FaceRecognition({
       console.log('Auto-starting face recognition camera...');
       startCamera();
     } else if (!isActive && isCameraActive) {
-      console.log('Stopping face recognition camera...');
+      console.log('Stopping face recognition camera due to isActive=false...');
       stopCamera();
     }
   }, [isActive, isModelLoaded, faceMatcher, isCameraActive, startCamera, stopCamera]);
+
+  // Force stop camera when isActive becomes false (immediate response)
+  useEffect(() => {
+    if (!isActive && isCameraActive) {
+      console.log('Force stopping camera due to isActive=false...');
+      stopCamera();
+    }
+  }, [isActive, isCameraActive, stopCamera]);
 
   // Cleanup on unmount
   useEffect(() => {

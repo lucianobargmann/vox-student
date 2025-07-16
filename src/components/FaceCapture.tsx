@@ -6,6 +6,7 @@ import { Camera, CameraOff, RotateCcw, Check, X } from 'lucide-react';
 import { loadFaceApiModels, faceapi, getFaceDetectionOptions } from '@/lib/face-api-loader';
 import { toast } from 'sonner';
 import { playSuccessSound, playErrorSound, playDetectionSound } from '@/lib/audio-feedback';
+import { stopCameraCompletely } from '@/lib/camera-utils';
 
 interface FaceCaptureProps {
   onFaceDetected?: (faceDescriptor: Float32Array, imageData: string) => void;
@@ -112,18 +113,19 @@ export function FaceCapture({
 
   // Stop camera
   const stopCamera = useCallback(() => {
-    console.log('Stopping camera...');
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-      videoRef.current.onloadedmetadata = null; // Clear listener
-    }
+    console.log('Stopping face capture camera...');
+
+    // Use utility function for complete camera cleanup
+    stopCameraCompletely(streamRef.current, videoRef.current);
+
+    // Clear refs
+    streamRef.current = null;
+
+    // Update state
     setIsCameraActive(false);
     setShowVideo(false);
     setFaceDetected(false);
+    console.log('Face capture camera stopped');
   }, []);
 
   // Detect faces in video stream

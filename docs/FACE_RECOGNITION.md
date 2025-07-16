@@ -85,7 +85,7 @@ FACE_DETECTION_OPTIONS = {
 FACE_MATCH_THRESHOLD = 0.6
 
 // Confiança mínima para reconhecimento automático
-AUTO_RECOGNITION_THRESHOLD = 0.7
+AUTO_RECOGNITION_THRESHOLD = 0.5
 ```
 
 ### Permissões Necessárias
