@@ -22,13 +22,16 @@ export async function generateLessonsForClass({
   }
 
   const lessons = [];
-  const dayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+  // Create a local date to avoid timezone issues
+  const localStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const dayOfWeek = localStartDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
   for (let i = 0; i < numberOfLessons; i++) {
     // Calculate the date for this lesson (start date + i weeks)
-    const lessonDate = new Date(startDate);
-    lessonDate.setDate(startDate.getDate() + (i * 7));
-    
+    const lessonDate = new Date(localStartDate);
+    lessonDate.setDate(localStartDate.getDate() + (i * 7));
+
     // Set the time for the lesson
     const [hours, minutes] = classTime.split(':').map(Number);
     lessonDate.setHours(hours, minutes, 0, 0);
@@ -204,9 +207,12 @@ export async function ensureLessonsForClass(classId: string) {
       classData.course.numberOfLessons &&
       classData.course.numberOfLessons > 0) {
 
+    // Create a proper local date from the stored date
+    const localStartDate = new Date(classData.startDate.getFullYear(), classData.startDate.getMonth(), classData.startDate.getDate());
+
     await generateLessonsForClass({
       classId: classData.id,
-      startDate: classData.startDate,
+      startDate: localStartDate,
       numberOfLessons: classData.course.numberOfLessons,
       classTime: classData.classTime || '19:00'
     });

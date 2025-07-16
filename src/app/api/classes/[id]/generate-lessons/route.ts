@@ -51,9 +51,12 @@ export async function POST(
 
     if (force && classData.lessons.length > 0) {
       // Force regeneration - delete existing lessons and create new ones
+      // Create a proper local date from the stored date
+      const localStartDate = new Date(classData.startDate.getFullYear(), classData.startDate.getMonth(), classData.startDate.getDate());
+
       await regenerateLessonsForClass({
         classId: classData.id,
-        startDate: classData.startDate,
+        startDate: localStartDate,
         numberOfLessons: classData.course.numberOfLessons,
         classTime: classData.classTime || '19:00'
       });

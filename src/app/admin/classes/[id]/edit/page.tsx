@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { canManageClasses } from '@/lib/roles';
 import { ClassEnrollmentsManager } from '@/components/ClassEnrollmentsManager';
 import { LessonCalendar } from '@/components/LessonCalendar';
+import { convertLocalDateToUTC, convertUTCToLocalDateInput } from '@/lib/date-utils';
 
 interface Course {
   id: string;
@@ -103,8 +104,8 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
         name: classData.name || '',
         description: classData.description || '',
         courseId: classData.courseId || '',
-        startDate: classData.startDate ? classData.startDate.split('T')[0] : '',
-        endDate: classData.endDate ? classData.endDate.split('T')[0] : '',
+        startDate: classData.startDate ? convertUTCToLocalDateInput(classData.startDate) : '',
+        endDate: classData.endDate ? convertUTCToLocalDateInput(classData.endDate) : '',
         classTime: classData.classTime || '19:00',
         maxStudents: classData.maxStudents ? classData.maxStudents.toString() : '',
         isActive: classData.isActive !== undefined ? classData.isActive : true
@@ -154,8 +155,8 @@ export default function EditClass({ params }: { params: Promise<{ id: string }> 
           name: formData.name.trim(),
           description: formData.description.trim() || null,
           courseId: formData.courseId,
-          startDate: formData.startDate,
-          endDate: formData.endDate || null,
+          startDate: convertLocalDateToUTC(formData.startDate),
+          endDate: convertLocalDateToUTC(formData.endDate),
           classTime: formData.classTime,
           maxStudents: formData.maxStudents ? parseInt(formData.maxStudents) : null,
           isActive: formData.isActive

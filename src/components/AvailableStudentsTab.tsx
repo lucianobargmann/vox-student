@@ -24,6 +24,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { enrollmentsService } from '@/lib/services/enrollments.service';
 
 interface Student {
   id: string;
@@ -96,24 +97,16 @@ export function AvailableStudentsTab({
   const handleQuickEnroll = async (studentId: string, type: 'regular' | 'guest' | 'restart' = 'regular') => {
     try {
       setEnrollingStudents(prev => new Set(prev).add(studentId));
-      
-      const response = await fetch('/api/enrollments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          studentId,
-          courseId,
-          classId,
-          type,
-          notes: `Matrícula rápida via detalhes da turma`
-        }),
+
+      const result = await enrollmentsService.createEnrollment({
+        studentId,
+        courseId,
+        classId,
+        type,
+        notes: `Matrícula rápida via detalhes da turma`
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (!result.success) {
         throw new Error(result.error || 'Erro ao matricular aluno');
       }
 

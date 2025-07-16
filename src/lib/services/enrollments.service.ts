@@ -25,14 +25,18 @@ export interface Enrollment {
 
 export interface CreateEnrollmentRequest {
   studentId: string;
-  classId: string;
-  status?: 'active' | 'inactive';
+  courseId: string;
+  classId?: string | null;
+  type?: 'regular' | 'guest' | 'restart';
+  notes?: string;
+  transferredFromId?: string;
 }
 
 export interface TransferEnrollmentRequest {
   enrollmentId: string;
   newClassId: string;
-  reason?: string;
+  transferType?: 'restart' | 'guest';
+  notes?: string;
 }
 
 export interface UpdateAbsencesRequest {
@@ -66,8 +70,8 @@ class EnrollmentsService {
     return apiClient.delete(`/api/enrollments/${id}`);
   }
 
-  async reactivateEnrollment(id: string): Promise<ApiResponse<Enrollment>> {
-    return apiClient.post<Enrollment>(`/api/enrollments/${id}/reactivate`);
+  async reactivateEnrollment(id: string, resetAbsences: boolean = false, notes?: string): Promise<ApiResponse<Enrollment>> {
+    return apiClient.post<Enrollment>(`/api/enrollments/${id}/reactivate`, { resetAbsences, notes });
   }
 
   async transferEnrollment(transfer: TransferEnrollmentRequest): Promise<ApiResponse<Enrollment>> {

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, User, LogOut, Shield, BookOpen, Users, Calendar, MessageSquare, BarChart3, Settings, CheckSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { isSuperAdmin, isAdminOrSuperAdmin } from '@/lib/roles';
 
 export default function Dashboard() {
   const { user, loading, signOut } = useAuth();
@@ -31,7 +32,8 @@ export default function Dashboard() {
     return null;
   }
 
-  const isAdmin = user.profile?.role === 'admin' || user.profile?.role === 'super_admin';
+  const isAdmin = isAdminOrSuperAdmin(user);
+  const isSuperAdminUser = isSuperAdmin(user);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -144,34 +146,36 @@ export default function Dashboard() {
                       </Button>
                     </div>
 
-                    {/* Sistema */}
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Sistema</h3>
-                      <Button
-                        onClick={() => router.push('/admin/settings')}
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Configurações
-                      </Button>
-                      <Button
-                        onClick={() => router.push('/admin/whatsapp')}
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Painel do WhatsApp
-                      </Button>
-                      <Button
-                        onClick={() => router.push('/admin/security')}
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Dashboard de Segurança
-                      </Button>
-                    </div>
+                    {/* Sistema - Apenas Super Admins */}
+                    {isSuperAdminUser && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Sistema</h3>
+                        <Button
+                          onClick={() => router.push('/admin/settings')}
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Configurações
+                        </Button>
+                        <Button
+                          onClick={() => router.push('/admin/whatsapp')}
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Painel do WhatsApp
+                        </Button>
+                        <Button
+                          onClick={() => router.push('/admin/security')}
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
+                          <Shield className="w-4 h-4 mr-2" />
+                          Dashboard de Segurança
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

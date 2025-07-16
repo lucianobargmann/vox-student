@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { ClassEnrollmentsManager } from '@/components/ClassEnrollmentsManager';
 import { AvailableStudentsTab } from '@/components/AvailableStudentsTab';
 import { apiClient } from '@/lib/api-client';
+import { formatDateForDisplay } from '@/lib/date-utils';
 
 interface ClassData {
   id: string;
@@ -115,9 +116,7 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
     return null;
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
+  const formatDate = formatDateForDisplay;
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR');

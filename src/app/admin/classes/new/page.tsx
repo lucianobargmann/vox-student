@@ -13,6 +13,7 @@ import { Loader2, Calendar, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { canManageClasses } from '@/lib/roles';
+import { convertLocalDateToUTC } from '@/lib/date-utils';
 
 interface Course {
   id: string;
@@ -147,8 +148,8 @@ export default function NewClass() {
           name: formData.name.trim(),
           description: formData.description.trim() || null,
           courseId: formData.courseId,
-          startDate: formData.startDate,
-          endDate: formData.endDate || null,
+          startDate: convertLocalDateToUTC(formData.startDate),
+          endDate: convertLocalDateToUTC(formData.endDate),
           classTime: formData.classTime,
           maxStudents: formData.maxStudents ? parseInt(formData.maxStudents) : null,
           isActive: formData.isActive

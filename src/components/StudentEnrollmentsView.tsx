@@ -31,6 +31,7 @@ import {
   Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { enrollmentsService } from '@/lib/services/enrollments.service';
 
 interface Enrollment {
   id: string;
@@ -86,12 +87,13 @@ export function StudentEnrollmentsView({ studentId, studentName }: StudentEnroll
   const loadEnrollments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/enrollments?studentId=${studentId}`);
-      const result = await response.json();
-      
-      if (result.data) {
+      const result = await enrollmentsService.getEnrollments(undefined, studentId);
+
+      if (result.success && result.data) {
         setEnrollments(result.data);
         calculateStats(result.data);
+      } else {
+        throw new Error(result.error || 'Erro ao carregar matrículas');
       }
     } catch (error) {
       console.error('Error loading enrollments:', error);

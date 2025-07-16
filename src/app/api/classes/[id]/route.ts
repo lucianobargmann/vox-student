@@ -143,9 +143,13 @@ export async function PUT(
     if (oldClass.lessons.length === 0 &&
         classData.course.numberOfLessons &&
         classData.course.numberOfLessons > 0) {
+      // Parse the date string and create a proper local date
+      const parsedDate = new Date(startDate);
+      const localStartDate = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+
       await generateLessonsForClass({
         classId: classData.id,
-        startDate: new Date(startDate),
+        startDate: localStartDate,
         numberOfLessons: classData.course.numberOfLessons,
         classTime: classTime || oldClass.classTime || '19:00'
       });

@@ -14,6 +14,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdmin } from '@/lib/roles';
 
 interface Lesson {
   id: string;
@@ -47,6 +49,7 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingLessons, setGeneratingLessons] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadLessons();
@@ -214,7 +217,7 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
             <Calendar className="w-5 h-5 mr-2" />
             Calendário de Aulas
           </div>
-          {lessons.length > 0 && (
+          {lessons.length > 0 && isSuperAdmin(user) && (
             <Button
               onClick={() => generateLessons(true)}
               disabled={generatingLessons}
@@ -226,7 +229,7 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
               ) : (
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
-              Regenerar
+              Gerar Aulas Novamente
             </Button>
           )}
         </CardTitle>

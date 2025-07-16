@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateStudentDialog } from '@/components/CreateStudentDialog';
+import { enrollmentsService } from '@/lib/services/enrollments.service';
 
 interface Student {
   id: string;
@@ -203,31 +204,17 @@ export function EnrollStudentDialog({
     try {
       setLoading(true);
 
-      const token = localStorage.getItem('auth_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
       const enrollmentData = {
         studentId: selectedStudent.id,
         courseId: formData.courseId,
         classId: formData.classId === 'no-class' ? null : formData.classId || null,
-        type: formData.type,
-        notes: formData.notes.trim() || null
+        type: formData.type as 'regular' | 'guest' | 'restart',
+        notes: formData.notes.trim() || undefined
       };
 
-      const response = await fetch('/api/enrollments', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(enrollmentData),
-      });
+      const result = await enrollmentsService.createEnrollment(enrollmentData);
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (!result.success) {
         throw new Error(result.error || 'Erro ao criar matrícula');
       }
 

@@ -147,9 +147,13 @@ export async function POST(request: NextRequest) {
 
     // Generate lessons for the class if course has numberOfLessons defined
     if (course.numberOfLessons && course.numberOfLessons > 0) {
+      // Parse the date string and create a proper local date
+      const parsedDate = new Date(startDate);
+      const localStartDate = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+
       await generateLessonsForClass({
         classId: classData.id,
-        startDate: new Date(startDate),
+        startDate: localStartDate,
         numberOfLessons: course.numberOfLessons,
         classTime: classTime || '19:00'
       });

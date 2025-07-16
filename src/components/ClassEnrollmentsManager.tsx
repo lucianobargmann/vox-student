@@ -34,7 +34,7 @@ import {
 import { toast } from 'sonner';
 import { EnrollStudentDialog } from './EnrollStudentDialog';
 import { TransferStudentDialog } from './TransferStudentDialog';
-import { apiClient } from '@/lib/api-client';
+import { enrollmentsService } from '@/lib/services/enrollments.service';
 
 interface Enrollment {
   id: string;
@@ -90,8 +90,12 @@ export function ClassEnrollmentsManager({
   const loadEnrollments = async () => {
     try {
       setLoading(true);
-      const result = await apiClient.getEnrollments({ classId });
-      setEnrollments(result.data);
+      const result = await enrollmentsService.getEnrollments(classId);
+      if (result.success && result.data) {
+        setEnrollments(result.data);
+      } else {
+        throw new Error(result.error || 'Erro ao carregar matrículas');
+      }
     } catch (error) {
       console.error('Error loading enrollments:', error);
       toast.error('Erro ao carregar matrículas');
@@ -102,22 +106,14 @@ export function ClassEnrollmentsManager({
 
   const handleReactivateEnrollment = async (enrollmentId: string, resetAbsences: boolean = false) => {
     try {
-      const response = await fetch(`/api/enrollments/${enrollmentId}/reactivate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ resetAbsences }),
-      });
+      const result = await enrollmentsService.reactivateEnrollment(enrollmentId, resetAbsences);
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (result.success) {
+        toast.success(result.message || 'Matrícula reativada com sucesso!');
+        loadEnrollments();
+      } else {
         throw new Error(result.error || 'Erro ao reativar matrícula');
       }
-
-      toast.success(result.message || 'Matrícula reativada com sucesso!');
-      loadEnrollments();
     } catch (error) {
       console.error('Error reactivating enrollment:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao reativar matrícula');
@@ -130,18 +126,14 @@ export function ClassEnrollmentsManager({
     }
 
     try {
-      const response = await fetch(`/api/enrollments/${enrollmentId}`, {
-        method: 'DELETE',
-      });
+      const result = await enrollmentsService.deleteEnrollment(enrollmentId);
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (result.success) {
+        toast.success(result.message || 'Matrícula excluída com sucesso!');
+        loadEnrollments();
+      } else {
         throw new Error(result.error || 'Erro ao excluir matrícula');
       }
-
-      toast.success('Matrícula excluída com sucesso!');
-      loadEnrollments();
     } catch (error) {
       console.error('Error deleting enrollment:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao excluir matrícula');

@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowRightLeft, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { enrollmentsService } from '@/lib/services/enrollments.service';
 
 interface Class {
   id: string;
@@ -116,23 +117,15 @@ export function TransferStudentDialog({
 
     try {
       setLoading(true);
-      
-      const response = await fetch('/api/enrollments/transfer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          enrollmentId: enrollment.id,
-          newClassId: formData.newClassId,
-          transferType: formData.transferType,
-          notes: formData.notes.trim() || null
-        }),
+
+      const result = await enrollmentsService.transferEnrollment({
+        enrollmentId: enrollment.id,
+        newClassId: formData.newClassId,
+        transferType: formData.transferType as 'restart' | 'guest',
+        notes: formData.notes.trim() || undefined
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (!result.success) {
         throw new Error(result.error || 'Erro ao transferir aluno');
       }
 

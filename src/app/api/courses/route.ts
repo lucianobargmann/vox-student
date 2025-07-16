@@ -15,12 +15,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
 
-    console.log('🔍 COURSES API DEBUG:', {
-      url: request.url,
-      search,
-      searchParams: Object.fromEntries(searchParams.entries())
-    });
-
     let whereClause = {};
     if (search) {
       whereClause = {
@@ -29,8 +23,6 @@ export async function GET(request: NextRequest) {
         }
       };
     }
-
-    console.log('🔍 COURSES WHERE CLAUSE:', whereClause);
 
     const courses = await prisma.course.findMany({
       where: whereClause,

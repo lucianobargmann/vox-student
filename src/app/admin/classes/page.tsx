@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { canManageClasses } from '@/lib/roles';
+import { formatDateForDisplay } from '@/lib/date-utils';
 
 interface Class {
   id: string;
@@ -137,9 +138,7 @@ export default function ClassesManagement() {
     });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
+  const formatDate = formatDateForDisplay;
 
   const fetchClassStudents = async (classId: string) => {
     if (classStudents[classId]) {
