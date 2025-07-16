@@ -124,6 +124,22 @@ export function FaceRecognition({
         if (videoRef.current) {
           console.log('Assigning stream to face recognition video element...');
           videoRef.current.srcObject = stream;
+
+          // Add event listeners to monitor stream status
+          videoRef.current.onloadedmetadata = () => {
+            console.log('✅ Video metadata loaded successfully');
+          };
+
+          videoRef.current.onerror = (e) => {
+            console.error('❌ Video error:', e);
+          };
+
+          stream.getTracks().forEach(track => {
+            track.onended = () => {
+              console.log('🚨 Track ended:', track.kind);
+            };
+          });
+
           setIsCameraActive(true);
           console.log('Face recognition camera set to active');
         } else {
@@ -193,11 +209,7 @@ export function FaceRecognition({
           height: videoRef.current.videoHeight
         });
 
-        // Draw detections
-        if (canvasRef.current) {
-          faceApiModule.draw.drawDetections(canvasRef.current, resizedDetections);
-          faceApiModule.draw.drawFaceLandmarks(canvasRef.current, resizedDetections);
-        }
+        // Note: Debug overlays removed for cleaner UI
 
         // Find best match
         let hasUnknownFace = false;
@@ -225,21 +237,21 @@ export function FaceRecognition({
                     console.log(`${student.name} already marked as present, skipping recognition`);
                     // Still add to recognized set to avoid repeated attempts
                     setRecognizedStudents(prev => new Set(prev).add(student.id));
-                    return;
+                    // Continue processing instead of returning
+                  } else {
+                    const now = Date.now();
+
+                    // Only play sound if it's been at least 3 seconds since last recognition
+                    if (now - lastRecognitionTime > 3000) {
+                      setLastRecognitionTime(now);
+                      playRecognitionSound();
+                      feedbackMessages.addRecognition(student.name, Math.round(confidence * 100));
+                    }
+
+                    setRecognizedStudents(prev => new Set(prev).add(student.id));
+                    onStudentRecognized?.(student.id, confidence);
+                    toast.success(`${student.name} reconhecido automaticamente!`);
                   }
-
-                  const now = Date.now();
-
-                  // Only play sound if it's been at least 3 seconds since last recognition
-                  if (now - lastRecognitionTime > 3000) {
-                    setLastRecognitionTime(now);
-                    playRecognitionSound();
-                    feedbackMessages.addRecognition(student.name, Math.round(confidence * 100));
-                  }
-
-                  setRecognizedStudents(prev => new Set(prev).add(student.id));
-                  onStudentRecognized?.(student.id, confidence);
-                  toast.success(`${student.name} reconhecido automaticamente!`);
                 }
               }
             }
@@ -270,7 +282,13 @@ export function FaceRecognition({
   useEffect(() => {
     if (!isCameraActive || !isActive) return;
 
-    const interval = setInterval(recognizeFaces, 200);
+    const interval = setInterval(() => {
+      // Check if video stream is still active and restore if needed
+      if (videoRef.current && !videoRef.current.srcObject && streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
+      recognizeFaces();
+    }, 200);
     return () => clearInterval(interval);
   }, [isCameraActive, isActive, recognizeFaces]);
 
@@ -279,7 +297,7 @@ export function FaceRecognition({
     if (isActive && isModelLoaded && faceMatcher && !isCameraActive) {
       console.log('Auto-starting face recognition camera...');
       startCamera();
-    } else if (!isActive) {
+    } else if (!isActive && isCameraActive) {
       console.log('Stopping face recognition camera...');
       stopCamera();
     }

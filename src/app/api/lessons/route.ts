@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
-import { getLessonsWithAttendance, getTodaysLessons } from '@/lib/lesson-utils';
+import { getLessonsWithAttendance, getTodaysLessons, getActiveLessons } from '@/lib/lesson-utils';
 
 // GET /api/lessons - Get lessons with optional filters
 export async function GET(request: NextRequest) {
@@ -14,10 +14,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get('classId');
     const today = searchParams.get('today');
+    const active = searchParams.get('active');
 
     let lessons;
 
-    if (today === 'true') {
+    if (active === 'true') {
+      // Get active lessons (1h before start to 1h after end)
+      lessons = await getActiveLessons();
+    } else if (today === 'true') {
       // Get today's lessons across all classes
       lessons = await getTodaysLessons();
     } else if (classId) {
@@ -58,7 +62,7 @@ export async function GET(request: NextRequest) {
         eventType: 'data_access',
         severity: 'low',
         description: `User accessed lessons list`,
-        metadata: JSON.stringify({ classId, today }),
+        metadata: JSON.stringify({ classId, today, active }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }

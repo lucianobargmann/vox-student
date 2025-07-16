@@ -181,6 +181,74 @@ export async function getTodaysLessons() {
 }
 
 /**
+ * Get active lessons (1 hour before start time to 1 hour after end time)
+ */
+export async function getActiveLessons() {
+  const now = new Date();
+
+  // Get lessons that are within the active window
+  const lessons = await prisma.lesson.findMany({
+    include: {
+      class: {
+        include: {
+          course: {
+            select: {
+              id: true,
+              name: true,
+              allowsMakeup: true
+            }
+          },
+          enrollments: {
+            where: {
+              status: 'active'
+            },
+            include: {
+              student: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  faceDescriptor: true,
+                  photoUrl: true,
+                  faceDataUpdatedAt: true
+                }
+              }
+            }
+          }
+        }
+      },
+      attendance: {
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      }
+    },
+    orderBy: { scheduledDate: 'asc' }
+  });
+
+  // Filter lessons that are active (1h before start to 1h after end)
+  const activeLessons = lessons.filter(lesson => {
+    const lessonStart = new Date(lesson.scheduledDate);
+    const lessonEnd = new Date(lessonStart.getTime() + (lesson.duration || 120) * 60 * 1000);
+
+    // 1 hour before start time
+    const activeStart = new Date(lessonStart.getTime() - 60 * 60 * 1000);
+    // 1 hour after end time
+    const activeEnd = new Date(lessonEnd.getTime() + 60 * 60 * 1000);
+
+    return now >= activeStart && now <= activeEnd;
+  });
+
+  return activeLessons;
+}
+
+/**
  * Check if a class needs lessons generated and generate them if needed
  * This function checks if the class has no lessons and the course has numberOfLessons defined
  */

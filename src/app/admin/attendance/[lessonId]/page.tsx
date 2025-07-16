@@ -283,16 +283,10 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="w-full" data-testid="attendance-marking">
         <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center space-x-4">
-            <Button onClick={() => router.push('/admin/attendance')} variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <CheckSquare className="w-8 h-8 mr-3" />
-              Marcar Presença
-            </h1>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+            <CheckSquare className="w-8 h-8 mr-3" />
+            Marcar Presença
+          </h1>
           <div className="flex items-center space-x-2">
             <Button
               onClick={toggleFaceRecognition}
@@ -473,19 +467,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
               })}
             </div>
 
-            <div className="flex justify-end space-x-4 mt-6 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/admin/attendance')}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Button>
-              <div className="flex items-center text-sm text-green-600">
-                <Check className="w-4 h-4 mr-1" />
-                Salvamento automático ativo
-              </div>
-            </div>
+
           </CardContent>
         </Card>
       </div>
