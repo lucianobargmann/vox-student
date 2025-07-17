@@ -137,14 +137,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate that all students are enrolled in the class
-    const enrolledStudentIds = lesson.class.enrollments.map(e => e.student.id);
+    // Validate that all students exist (removed enrollment restriction)
     const attendanceStudentIds = attendance.map((a: any) => a.studentId);
-    
-    const invalidStudents = attendanceStudentIds.filter(id => !enrolledStudentIds.includes(id));
+
+    const existingStudents = await prisma.student.findMany({
+      where: { id: { in: attendanceStudentIds } },
+      select: { id: true }
+    });
+
+    const existingStudentIds = existingStudents.map(s => s.id);
+    const invalidStudents = attendanceStudentIds.filter(id => !existingStudentIds.includes(id));
+
     if (invalidStudents.length > 0) {
       return NextResponse.json(
-        { error: 'Alguns alunos não estão matriculados nesta turma' },
+        { error: 'Alguns alunos não foram encontrados no sistema' },
         { status: 400 }
       );
     }
@@ -161,7 +167,7 @@ export async function POST(request: NextRequest) {
         attendance.map(async (record: any) => {
           const { studentId, status } = record;
 
-          if (!['present', 'absent', 'makeup'].includes(status)) {
+          if (!['present', 'absent'].includes(status)) {
             throw new Error(`Status inválido: ${status}`);
           }
 
@@ -245,7 +251,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!status || !['present', 'absent', 'makeup'].includes(status)) {
+    if (!status || !['present', 'absent'].includes(status)) {
       return NextResponse.json(
         { error: 'Status inválido' },
         { status: 400 }

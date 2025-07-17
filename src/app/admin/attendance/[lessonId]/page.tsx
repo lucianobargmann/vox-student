@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckSquare, ArrowLeft, Clock, Users, UserCheck, UserX, RotateCcw, Camera, CameraOff, User, Check, Loader2 } from 'lucide-react';
+import { CheckSquare, Clock, Users, UserCheck, UserX, Camera, CameraOff, User, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, use } from 'react';
 import { format } from 'date-fns';
@@ -36,7 +36,7 @@ interface Class {
 
 interface Attendance {
   id: string;
-  status: 'present' | 'absent' | 'makeup';
+  status: 'present' | 'absent';
   student: Student;
 }
 
@@ -54,7 +54,7 @@ interface Lesson {
 
 interface AttendanceRecord {
   studentId: string;
-  status: 'present' | 'absent' | 'makeup';
+  status: 'present' | 'absent';
 }
 
 export default function AttendanceMarking({ params }: { params: Promise<{ lessonId: string }> }) {
@@ -64,7 +64,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent' | 'makeup'>>({});
+  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent'>>({});
   const [faceRecognitionActive, setFaceRecognitionActive] = useState(false);
   const [recognizedStudents, setRecognizedStudents] = useState<Set<string>>(new Set());
 
@@ -105,11 +105,13 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
       setLesson(lessonData);
 
       // Initialize attendance records
-      const records: Record<string, 'present' | 'absent' | 'makeup'> = {};
-      
+      const records: Record<string, 'present' | 'absent'> = {};
+
       // Set existing attendance
       lessonData.attendance.forEach((att: Attendance) => {
-        records[att.student.id] = att.status;
+        // Convert any 'makeup' status to 'present' since we're removing makeup distinction
+        const status = att.status === 'makeup' ? 'present' : att.status;
+        records[att.student.id] = status as 'present' | 'absent';
       });
 
       // Set default status for students without attendance
@@ -138,7 +140,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
     }
   };
 
-  const updateAttendance = async (studentId: string, status: 'present' | 'absent' | 'makeup') => {
+  const updateAttendance = async (studentId: string, status: 'present' | 'absent') => {
     // Update local state immediately for UI responsiveness
     setAttendanceRecords(prev => ({
       ...prev,
@@ -149,7 +151,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
     await autoSaveAttendance(studentId, status);
   };
 
-  const autoSaveAttendance = async (studentId: string, status: 'present' | 'absent' | 'makeup') => {
+  const autoSaveAttendance = async (studentId: string, status: 'present' | 'absent') => {
     if (!lesson) return;
 
     try {
@@ -273,8 +275,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
   const getStatusCounts = () => {
     const present = Object.values(attendanceRecords).filter(status => status === 'present').length;
     const absent = Object.values(attendanceRecords).filter(status => status === 'absent').length;
-    const makeup = Object.values(attendanceRecords).filter(status => status === 'makeup').length;
-    return { present, absent, makeup };
+    return { present, absent };
   };
 
   const statusCounts = getStatusCounts();
@@ -315,12 +316,6 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
               <UserX className="w-3 h-3 mr-1" />
               {statusCounts.absent} ausentes
             </Badge>
-            {statusCounts.makeup > 0 && (
-              <Badge variant="outline" className="text-blue-600">
-                <RotateCcw className="w-3 h-3 mr-1" />
-                {statusCounts.makeup} reposição
-              </Badge>
-            )}
 
             <Badge variant="outline" className="text-purple-600">
               <User className="w-3 h-3 mr-1" />
@@ -451,15 +446,6 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
                       >
                         <UserX className="w-4 h-4 mr-1" />
                         Ausente
-                      </Button>
-                      <Button
-                        variant={currentStatus === 'makeup' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => updateAttendance(student.id, 'makeup')}
-                        className={currentStatus === 'makeup' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                      >
-                        <RotateCcw className="w-4 h-4 mr-1" />
-                        Reposição
                       </Button>
                     </div>
                   </div>

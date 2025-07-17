@@ -4,12 +4,19 @@ import { ReminderService } from '@/lib/reminder-service';
 import { prisma } from '@/lib/prisma';
 
 // POST /api/reminders/makeup - Send makeup class reminders
+// @deprecated - Makeup functionality has been removed
 export async function POST(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
+
+    // Return deprecated message
+    return NextResponse.json(
+      { error: 'Funcionalidade de reposição foi removida do sistema' },
+      { status: 410 }
+    );
 
     const body = await request.json();
     const { classId, makeupDate } = body;

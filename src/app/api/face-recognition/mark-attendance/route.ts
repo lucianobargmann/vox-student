@@ -35,28 +35,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
     }
 
-    // Verify student exists and is enrolled in this class
+    // Verify student exists (removed enrollment restriction)
     const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      include: {
-        enrollments: {
-          where: {
-            classId: lesson.classId,
-            status: 'active'
-          }
-        }
-      }
+      where: { id: studentId }
     });
 
     if (!student) {
       return NextResponse.json({ error: 'Aluno não encontrado' }, { status: 404 });
-    }
-
-    if (student.enrollments.length === 0) {
-      return NextResponse.json(
-        { error: 'Aluno não está matriculado nesta turma' },
-        { status: 400 }
-      );
     }
 
     // Check if attendance already exists

@@ -52,7 +52,7 @@ export interface AttendanceStats {
 
 export interface MarkAttendanceRequest {
   studentId: string;
-  status: 'present' | 'absent' | 'late' | 'excused';
+  status: 'present' | 'absent';
   notes?: string;
 }
 

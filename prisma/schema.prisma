@@ -24,7 +24,6 @@ enum DayOfWeek {
 enum PresenceStatus {
   present
   absent
-  makeup
 }
 
 enum EnrollmentType {

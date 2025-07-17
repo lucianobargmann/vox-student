@@ -28,7 +28,7 @@ interface Lesson {
   notes?: string;
   attendance: Array<{
     id: string;
-    status: 'present' | 'absent' | 'makeup';
+    status: 'present' | 'absent';
     student: {
       id: string;
       name: string;
@@ -133,10 +133,9 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
   const getAttendanceStats = (lesson: Lesson) => {
     const present = lesson.attendance.filter(a => a.status === 'present').length;
     const absent = lesson.attendance.filter(a => a.status === 'absent').length;
-    const makeup = lesson.attendance.filter(a => a.status === 'makeup').length;
     const total = lesson.attendance.length;
 
-    return { present, absent, makeup, total };
+    return { present, absent, total };
   };
 
   const formatDate = (dateString: string) => {
@@ -322,9 +321,6 @@ export function LessonCalendar({ classId, className, onAttendanceClick }: Lesson
                         </span>
                         {stats.absent > 0 && (
                           <span className="text-red-600">{stats.absent} ausentes</span>
-                        )}
-                        {stats.makeup > 0 && (
-                          <span className="text-blue-600">{stats.makeup} reposição</span>
                         )}
                       </div>
 

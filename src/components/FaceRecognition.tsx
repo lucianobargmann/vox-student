@@ -22,7 +22,7 @@ interface FaceRecognitionProps {
   onError?: (error: string) => void;
   isActive?: boolean;
   className?: string;
-  attendanceRecords?: Record<string, 'present' | 'absent' | 'makeup'>;
+  attendanceRecords?: Record<string, 'present' | 'absent'>;
 }
 
 export function FaceRecognition({

@@ -287,6 +287,7 @@ export async function canEnrollInClass(studentId: string, classId: string): Prom
 
 /**
  * Get students eligible for makeup classes in a course
+ * @deprecated - Makeup functionality has been removed
  */
 export async function getEligibleMakeupStudents(courseId: string) {
   const enrollments = await prisma.enrollment.findMany({

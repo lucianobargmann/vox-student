@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckSquare, ArrowLeft, Calendar, Clock, UserCheck, UserX, RotateCcw, Camera, CameraOff, User, Check } from 'lucide-react';
+import { Loader2, CheckSquare, ArrowLeft, Calendar, Clock, UserCheck, UserX, Camera, CameraOff, User, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
@@ -36,7 +36,7 @@ interface Class {
 
 interface Attendance {
   id: string;
-  status: 'present' | 'absent' | 'makeup';
+  status: 'present' | 'absent';
   student: Student;
 }
 
@@ -57,7 +57,7 @@ export default function AttendanceManagement() {
   const router = useRouter();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, Record<string, 'present' | 'absent' | 'makeup'>>>({});
+  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, Record<string, 'present' | 'absent'>>>({});
   const [faceRecognitionActive, setFaceRecognitionActive] = useState(false);
   const [faceRecognitionManuallyStopped, setFaceRecognitionManuallyStopped] = useState(false);
   const [recognizedStudents, setRecognizedStudents] = useState<Set<string>>(new Set());
@@ -88,13 +88,15 @@ export default function AttendanceManagement() {
       setLessons(lessonsData);
 
       // Initialize attendance records for all lessons
-      const initialRecords: Record<string, Record<string, 'present' | 'absent' | 'makeup'>> = {};
+      const initialRecords: Record<string, Record<string, 'present' | 'absent'>> = {};
       lessonsData.forEach((lesson: Lesson) => {
         initialRecords[lesson.id] = {};
-        
+
         // Set existing attendance
         lesson.attendance.forEach((att) => {
-          initialRecords[lesson.id][att.student.id] = att.status;
+          // Convert any 'makeup' status to 'present' since we're removing makeup distinction
+          const status = att.status === 'makeup' ? 'present' : att.status;
+          initialRecords[lesson.id][att.student.id] = status as 'present' | 'absent';
         });
 
         // Set default status for students without attendance
@@ -114,7 +116,7 @@ export default function AttendanceManagement() {
     }
   };
 
-  const updateAttendance = async (lessonId: string, studentId: string, status: 'present' | 'absent' | 'makeup') => {
+  const updateAttendance = async (lessonId: string, studentId: string, status: 'present' | 'absent') => {
     // Update local state immediately for UI responsiveness
     setAttendanceRecords(prev => ({
       ...prev,
@@ -128,7 +130,7 @@ export default function AttendanceManagement() {
     await autoSaveAttendance(lessonId, studentId, status);
   };
 
-  const autoSaveAttendance = async (lessonId: string, studentId: string, status: 'present' | 'absent' | 'makeup') => {
+  const autoSaveAttendance = async (lessonId: string, studentId: string, status: 'present' | 'absent') => {
     try {
       const token = localStorage.getItem('auth_token');
 
@@ -408,7 +410,6 @@ export default function AttendanceManagement() {
                 const records = attendanceRecords[lesson.id] || {};
                 const present = Object.values(records).filter(status => status === 'present').length;
                 const absent = Object.values(records).filter(status => status === 'absent').length;
-                const makeup = Object.values(records).filter(status => status === 'makeup').length;
                 
                 return (
                   <Card key={lesson.id} className="h-fit">
@@ -433,12 +434,6 @@ export default function AttendanceManagement() {
                               <UserX className="w-3 h-3 mr-1" />
                               {absent}
                             </Badge>
-                            {makeup > 0 && (
-                              <Badge variant="outline" className="text-blue-600">
-                                <RotateCcw className="w-3 h-3 mr-1" />
-                                {makeup}
-                              </Badge>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -482,15 +477,6 @@ export default function AttendanceManagement() {
                                 >
                                   <UserX className="w-4 h-4 mr-1" />
                                   Ausente
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant={currentStatus === 'makeup' ? 'default' : 'outline'}
-                                  onClick={() => updateAttendance(lesson.id, student.id, 'makeup')}
-                                  className={currentStatus === 'makeup' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                                >
-                                  <RotateCcw className="w-4 h-4 mr-1" />
-                                  Reposição
                                 </Button>
                               </div>
                             </div>

@@ -195,6 +195,7 @@ export class ReminderService {
 
   /**
    * Send makeup class reminders
+   * @deprecated - Makeup functionality has been removed
    */
   static async sendMakeupReminders(classId: string, makeupDate: Date): Promise<void> {
     try {
