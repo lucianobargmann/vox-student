@@ -4,13 +4,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckSquare, Clock, Users, UserCheck, UserX, Camera, CameraOff, User, Loader2 } from 'lucide-react';
+import { CheckSquare, Clock, Users, UserCheck, UserX, RotateCcw, Camera, CameraOff, User, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, use } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { FaceRecognition } from '@/components/FaceRecognition';
+import { CameraSelector } from '@/components/CameraSelector';
+import { useCamera } from '@/hooks/useCamera';
 
 interface Student {
   id: string;
@@ -52,10 +54,6 @@ interface Lesson {
   attendance: Attendance[];
 }
 
-interface AttendanceRecord {
-  studentId: string;
-  status: 'present' | 'absent';
-}
 
 export default function AttendanceMarking({ params }: { params: Promise<{ lessonId: string }> }) {
   const resolvedParams = use(params);
@@ -67,6 +65,9 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent'>>({});
   const [faceRecognitionActive, setFaceRecognitionActive] = useState(false);
   const [recognizedStudents, setRecognizedStudents] = useState<Set<string>>(new Set());
+  
+  // Camera management
+  const { selectedCameraId, hasMultipleCameras } = useCamera();
 
   useEffect(() => {
     if (!loading && (!user || !['admin', 'super_admin'].includes(user.profile?.role || ''))) {
@@ -367,6 +368,14 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
                 Posicione os alunos na frente da câmera. Presença será marcada automaticamente.
               </CardDescription>
             </CardHeader>
+            {hasMultipleCameras && (
+              <CardHeader className="pt-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Câmera:</span>
+                  <CameraSelector />
+                </div>
+              </CardHeader>
+            )}
             <CardContent>
               <FaceRecognition
                 students={lesson.class.enrollments.map(e => e.student)}
@@ -374,6 +383,7 @@ export default function AttendanceMarking({ params }: { params: Promise<{ lesson
                 onError={(error) => toast.error(error)}
                 isActive={faceRecognitionActive}
                 attendanceRecords={attendanceRecords}
+                selectedCameraId={selectedCameraId}
               />
             </CardContent>
           </Card>

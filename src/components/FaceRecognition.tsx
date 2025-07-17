@@ -23,6 +23,7 @@ interface FaceRecognitionProps {
   isActive?: boolean;
   className?: string;
   attendanceRecords?: Record<string, 'present' | 'absent'>;
+  selectedCameraId?: string | null;
 }
 
 export function FaceRecognition({
@@ -31,7 +32,8 @@ export function FaceRecognition({
   onError,
   isActive = false,
   className = '',
-  attendanceRecords = {}
+  attendanceRecords = {},
+  selectedCameraId = null
 }: FaceRecognitionProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -109,12 +111,20 @@ export function FaceRecognition({
       // Show video element first
       setShowVideo(true);
 
+      const videoConstraints: MediaTrackConstraints = {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: 'user'
+      };
+
+      // Use selected camera if available
+      if (selectedCameraId) {
+        videoConstraints.deviceId = { exact: selectedCameraId };
+        delete videoConstraints.facingMode; // Remove facingMode when using specific deviceId
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: 'user'
-        }
+        video: videoConstraints
       });
 
       console.log('Face recognition camera stream obtained');
@@ -154,7 +164,7 @@ export function FaceRecognition({
       onError?.('Erro ao acessar câmera');
       toast.error('Erro ao acessar câmera. Verifique as permissões.');
     }
-  }, [onError]);
+  }, [onError, selectedCameraId]);
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -307,6 +317,18 @@ export function FaceRecognition({
       stopCamera();
     }
   }, [isActive, isModelLoaded, faceMatcher, isCameraActive, startCamera, stopCamera]);
+
+  // Restart camera when selected camera changes
+  useEffect(() => {
+    if (isActive && isCameraActive && selectedCameraId) {
+      console.log('Restarting camera due to camera selection change...');
+      stopCamera();
+      // Use timeout to ensure camera is properly stopped before restarting
+      setTimeout(() => {
+        startCamera();
+      }, 100);
+    }
+  }, [selectedCameraId, isActive, isCameraActive, startCamera, stopCamera]);
 
   // Force stop camera when isActive becomes false (immediate response)
   useEffect(() => {
