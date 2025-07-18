@@ -1,7 +1,31 @@
 #!/bin/bash
 
+#############################################################################
 # VoxStudent E2E Test Runner Script
-# This script sets up the environment and runs all E2E tests
+#############################################################################
+# Purpose: Set up test environment and run comprehensive E2E tests
+# Usage: ./scripts/run-e2e-tests.sh
+# 
+# This script performs the following actions:
+# 1. Validates Docker and required services
+# 2. Sets up Mailpit for email testing
+# 3. Starts Next.js development server if needed
+# 4. Prepares test database and environment
+# 5. Runs complete E2E test suite with Puppeteer
+# 6. Captures screenshots and generates reports
+# 7. Cleans up test environment
+#
+# Test Coverage:
+# - Authentication flow (magic links, WhatsApp)
+# - Course and student management
+# - Attendance control with facial recognition
+# - WhatsApp integration features
+# - Security and permission controls
+# - Admin panel functionality
+#
+# Author: VoxStudent Development Team
+# Version: 1.0.0
+#############################################################################
 
 set -e  # Exit on any error
 

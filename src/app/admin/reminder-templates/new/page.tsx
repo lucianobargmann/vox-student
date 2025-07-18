@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { templatesService } from '@/lib/services/templates.service';
+import { isAdminOrSuperAdmin } from '@/lib/roles';
 
 export default function NewReminderTemplate() {
   const { user, loading } = useAuth();
@@ -27,7 +28,7 @@ export default function NewReminderTemplate() {
   });
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && !isAdminOrSuperAdmin(user)) {
       router.push('/');
       return;
     }

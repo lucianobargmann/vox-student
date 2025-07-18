@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useEffect, useState } from 'react';
 import { templatesService, ReminderTemplate } from '@/lib/services/templates.service';
+import { isAdminOrSuperAdmin } from '@/lib/roles';
 
 export default function ReminderTemplatesManagement() {
   const { user, loading } = useAuth();
@@ -23,12 +24,12 @@ export default function ReminderTemplatesManagement() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || !['admin', 'super_admin'].includes(user.profile?.role || ''))) {
+    if (!loading && !isAdminOrSuperAdmin(user)) {
       router.push('/');
       return;
     }
 
-    if (user && ['admin', 'super_admin'].includes(user.profile?.role || '')) {
+    if (isAdminOrSuperAdmin(user)) {
       fetchTemplates();
     }
   }, [user, loading]);
