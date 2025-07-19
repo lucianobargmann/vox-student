@@ -13,9 +13,8 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Rebuild the source code only when needed
-FROM base AS builder
+FROM deps AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client
@@ -29,7 +28,7 @@ RUN if [ "$NODE_ENV" = "qa" ] ; then cp .env.qa.production .env.production ; fi
 # Build the application
 RUN npm run build
 
-# Production dependencies stage
+# Production dependencies stage - clean install with only production deps
 FROM base AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -58,11 +57,9 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma files
+# Copy Prisma files and production dependencies
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Next.js standalone includes most dependencies, but we need these runtime deps
 COPY --from=prod-deps /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=prod-deps /app/node_modules/prisma ./node_modules/prisma
 

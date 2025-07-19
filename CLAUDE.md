@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-VoxStudent is a modern student management system built with Next.js 15, featuring facial recognition attendance, WhatsApp integration, and comprehensive course management. It's a full-stack application using passwordless authentication and providing both admin and student portals.
+VoxStudent v1.0.0 is a modern student management system built with Next.js 15, featuring facial recognition attendance, WhatsApp integration, and comprehensive course management. It's a full-stack application using passwordless authentication and providing both admin and student portals.
 
 ## Common Development Commands
 
@@ -45,7 +45,14 @@ npm run start              # Start production server
   - Content sources defined with `@source "./src/**/*.{js,ts,jsx,tsx,mdx}"`
   - No separate `tailwind.config.js` file needed (v4 style)
   - PostCSS configured with `@tailwindcss/postcss` and `autoprefixer` plugins
-  - Dependencies: `tailwindcss@4.1.11`, `@tailwindcss/postcss@4.1.11`, `autoprefixer`
+  - Dependencies: `tailwindcss@4.1.11`, `@tailwindcss/postcss@4.1.11`, `autoprefixer@10.4.21`
+  - All dependencies properly saved in package.json
+
+### Docker Build Process
+- **Optimized Multi-stage Build:** Uses single `npm ci` for dependencies, separate stage for production deps
+- **Build Dependencies:** Full install (dev + prod) for build stage to ensure autoprefixer is available
+- **Runtime Dependencies:** Separate `npm ci --omit=dev` stage for lean production image
+- **Key Insight:** autoprefixer must be available during build (dev dependency) but not in final image
 
 ### QA Environment
 ```bash
