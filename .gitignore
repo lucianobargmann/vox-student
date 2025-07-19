@@ -51,3 +51,4 @@ scripts/template/*
 .clickup-config.json
 .clickup-time-tracking.json
 screenshots/
+database-backups/

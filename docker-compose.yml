@@ -12,8 +12,8 @@ services:
     env_file:
       - .env.production
     volumes:
-      - ./data:/app/prisma
-      - ./whatsapp-session:/app/whatsapp-session
+      - vox-student-db:/app/data
+      - vox-student-whatsapp:/app/whatsapp-session
     networks:
       - vox-student-network
     healthcheck:
@@ -51,4 +51,5 @@ networks:
     driver: bridge
 
 volumes:
-  vox-student-data:
+  vox-student-db:
+  vox-student-whatsapp:

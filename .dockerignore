@@ -24,3 +24,17 @@ tests
 .DS_Store
 Thumbs.db
 whatsapp-session
+# Optimization: exclude heavy dev files
+.git
+.next
+coverage
+test-results
+playwright-report
+e2e-tests
+tests
+.vscode
+.idea
+database-backups
+scripts/backup-database.sh
+scripts/deploy.sh
+scripts/build.sh
