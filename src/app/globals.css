@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@source "./src/**/*.{js,ts,jsx,tsx,mdx}";
+
 :root {
   /* VoxStudent Modern Theme - Beautiful gradients from email system */
   --background: #ffffff;
