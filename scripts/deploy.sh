@@ -269,7 +269,7 @@ done
 if [ "$HTTP_CODE" = "200" ]; then
     echo "   🔍 Testing login page..."
     LOGIN_TEST=$(curl -s -w "%{http_code}" "https://vox-student.hcktplanet.com/login" -o /tmp/login_test.html || echo "000")
-    if [[ "$LOGIN_TEST" == *"200" ]] && grep -q "Login" /tmp/login_test.html 2>/dev/null; then
+    if [[ "$LOGIN_TEST" == *"200" ]] && grep -q "VoxStudent" /tmp/login_test.html 2>/dev/null; then
         echo "   ✅ Login page loads correctly"
         
         # Test 3: Try to access API health endpoint

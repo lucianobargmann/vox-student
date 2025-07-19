@@ -7,10 +7,14 @@ import { Loader2, User, TrendingUp, Users, Calendar, MessageSquare, BarChart3, S
 import { useRouter } from 'next/navigation';
 import { isSuperAdmin, isAdminOrSuperAdmin } from '@/lib/roles';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
+import { useEffect, useState } from 'react';
+import { dashboardService, type DashboardData } from '@/lib/services/dashboard.service';
 
 export default function Dashboard() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
 
   if (loading) {
     return (
@@ -30,6 +34,24 @@ export default function Dashboard() {
 
   const isAdmin = isAdminOrSuperAdmin(user);
   const isSuperAdminUser = isSuperAdmin(user);
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      loadDashboardData();
+    }
+  }, [user, isAdmin]);
+
+  const loadDashboardData = async () => {
+    setDataLoading(true);
+    try {
+      const data = await dashboardService.getDashboardData();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   return (
     <DashboardLayout title="Dashboard">
@@ -65,77 +87,95 @@ export default function Dashboard() {
         {isAdmin && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total de Alunos</p>
-                      <p className="text-3xl font-bold text-gray-900">156</p>
-                      <p className="text-sm text-green-600 flex items-center mt-1">
-                        <TrendingUp className="w-4 h-4 mr-1" />
-                        +12% este mês
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {dataLoading ? (
+                // Loading skeleton
+                Array.from({ length: 4 }).map((_, i) => (
+                  <Card key={i} className="hover:shadow-lg transition-all duration-300">
+                    <CardContent className="p-6">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                        <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <>
+                  <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Total de Alunos</p>
+                          <p className="text-3xl font-bold text-gray-900">{dashboardData?.stats.totalStudents || 0}</p>
+                          <p className="text-sm text-green-600 flex items-center mt-1">
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                            +{dashboardData?.stats.studentGrowth || 0}% este mês
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-purple-500">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Turmas Ativas</p>
-                      <p className="text-3xl font-bold text-gray-900">24</p>
-                      <p className="text-sm text-green-600 flex items-center mt-1">
-                        <Sparkles className="w-4 h-4 mr-1" />
-                        8 novas turmas
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <Calendar className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-purple-500">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Turmas Ativas</p>
+                          <p className="text-3xl font-bold text-gray-900">{dashboardData?.stats.activeClasses || 0}</p>
+                          <p className="text-sm text-green-600 flex items-center mt-1">
+                            <Sparkles className="w-4 h-4 mr-1" />
+                            {dashboardData?.stats.newClasses || 0} novas turmas
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <Calendar className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Taxa de Presença</p>
-                      <p className="text-3xl font-bold text-gray-900">92%</p>
-                      <p className="text-sm text-green-600 flex items-center mt-1">
-                        <Award className="w-4 h-4 mr-1" />
-                        Excelente!
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <CheckSquare className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Taxa de Presença</p>
+                          <p className="text-3xl font-bold text-gray-900">{dashboardData?.stats.attendanceRate || 0}%</p>
+                          <p className="text-sm text-green-600 flex items-center mt-1">
+                            <Award className="w-4 h-4 mr-1" />
+                            {(dashboardData?.stats.attendanceRate || 0) >= 90 ? 'Excelente!' : 
+                             (dashboardData?.stats.attendanceRate || 0) >= 80 ? 'Muito bom!' : 'Precisa melhorar'}
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <CheckSquare className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Próximas Aulas</p>
-                      <p className="text-3xl font-bold text-gray-900">18</p>
-                      <p className="text-sm text-blue-600 flex items-center mt-1">
-                        <Clock className="w-4 h-4 mr-1" />
-                        Hoje
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <Clock className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Próximas Aulas</p>
+                          <p className="text-3xl font-bold text-gray-900">{dashboardData?.stats.upcomingLessons || 0}</p>
+                          <p className="text-sm text-blue-600 flex items-center mt-1">
+                            <Clock className="w-4 h-4 mr-1" />
+                            Hoje
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <Clock className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </div>
 
             {/* Advanced Analytics Grid */}
@@ -153,13 +193,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { name: 'Matemática Avançada', attendance: 95, students: 28, color: 'bg-green-500' },
-                      { name: 'Inglês Intermediário', attendance: 88, students: 22, color: 'bg-blue-500' },
-                      { name: 'Física Básica', attendance: 91, students: 31, color: 'bg-purple-500' },
-                      { name: 'Química Orgânica', attendance: 85, students: 19, color: 'bg-orange-500' },
-                      { name: 'História Contemporânea', attendance: 92, students: 25, color: 'bg-indigo-500' },
-                    ].map((class_, index) => (
+                    {(dashboardData?.classPerformance || []).map((class_, index) => (
                       <div key={index} className="flex items-center space-x-4">
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
@@ -223,12 +257,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {[
-                        { time: '09:00', class: 'Matemática Avançada', students: 28 },
-                        { time: '10:30', class: 'Inglês Intermediário', students: 22 },
-                        { time: '14:00', class: 'Física Básica', students: 31 },
-                        { time: '16:00', class: 'Química Orgânica', students: 19 },
-                      ].map((lesson, index) => (
+                      {(dashboardData?.upcomingLessons || []).map((lesson, index) => (
                         <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
                           <div>
                             <p className="font-medium text-sm">{lesson.class}</p>
@@ -313,15 +342,14 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { action: 'Novo aluno cadastrado', user: 'Maria Silva', time: '5 min atrás', icon: Users, color: 'text-blue-600' },
-                  { action: 'Presença registrada', user: 'Turma A - Matemática', time: '15 min atrás', icon: CheckSquare, color: 'text-green-600' },
-                  { action: 'Nova turma criada', user: 'Inglês Avançado', time: '1 hora atrás', icon: Calendar, color: 'text-purple-600' },
-                  { action: 'Relatório gerado', user: 'Frequência Mensal', time: '2 horas atrás', icon: BarChart3, color: 'text-orange-600' },
-                ].map((activity, index) => (
+                {(dashboardData?.recentActivity || []).map((activity, index) => {
+                  const IconComponent = activity.icon === 'Users' ? Users : 
+                                       activity.icon === 'CheckSquare' ? CheckSquare :
+                                       activity.icon === 'Calendar' ? Calendar : BarChart3;
+                  return (
                   <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50">
                     <div className={`w-10 h-10 rounded-full bg-white flex items-center justify-center ${activity.color}`}>
-                      <activity.icon className="w-5 h-5" />
+                      <IconComponent className="w-5 h-5" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{activity.action}</p>
@@ -329,7 +357,8 @@ export default function Dashboard() {
                     </div>
                     <p className="text-sm text-gray-400">{activity.time}</p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

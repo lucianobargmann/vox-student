@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
+import { VoxStudentLogo } from '@/components/ui/logo';
 
 export default function Login() {
   const { user, requestMagicLink, loading } = useAuth();
@@ -100,7 +101,7 @@ export default function Login() {
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-xl border-0 shadow-2xl relative z-10">
         <CardHeader className="text-center pb-8">
           <div className="mx-auto mb-6 w-20 h-20 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-2xl flex items-center justify-center shadow-xl">
-            <Mail className="w-10 h-10 text-white" />
+            <VoxStudentLogo size={40} className="text-white" />
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
             VoxStudent
@@ -249,7 +250,7 @@ export default function Login() {
             {showVersion && (
               <div className="flex items-center justify-center space-x-2 text-gray-400">
                 <div className="w-8 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-                <span className="text-xs font-medium">VoxStudent v0.1.0</span>
+                <span className="text-xs font-medium">VoxStudent v1.1.0</span>
                 <div className="w-8 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
               </div>
             )}

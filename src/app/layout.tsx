@@ -18,6 +18,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "VoxStudent - Sistema de Gestão Educacional",
   description: "Sistema de gestão educacional com autenticação por magic links",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', type: 'image/x-icon', sizes: '32x32' }
+    ],
+    apple: '/apple-touch-icon.png'
+  }
 };
 
 export default function RootLayout({

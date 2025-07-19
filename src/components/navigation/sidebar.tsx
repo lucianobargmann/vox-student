@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { VoxStudentLogoWhite } from '@/components/ui/logo'
 
 interface NavigationItem {
   label: string
@@ -76,7 +77,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   const pathname = usePathname()
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user, signOut } = useAuth()
 
   const toggleExpanded = (label: string) => {
     setExpandedItems(prev =>
@@ -139,7 +140,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <div className="flex items-center justify-between p-6 border-b border-white/20">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                <LayoutDashboard className="w-6 h-6" />
+                <VoxStudentLogoWhite size={24} />
               </div>
               <div>
                 <h1 className="text-xl font-bold">VoxStudent</h1>
@@ -243,7 +244,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           {/* Footer */}
           <div className="p-4 border-t border-white/20">
             <Button
-              onClick={logout}
+              onClick={() => signOut()}
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
