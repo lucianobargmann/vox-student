@@ -250,7 +250,7 @@ export default function Login() {
             {showVersion && (
               <div className="flex items-center justify-center space-x-2 text-gray-400">
                 <div className="w-8 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-                <span className="text-xs font-medium">VoxStudent v1.2.0</span>
+                <span className="text-xs font-medium">VoxStudent v1.3.0</span>
                 <div className="w-8 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
               </div>
             )}
