@@ -166,36 +166,64 @@ export default function CoursesManagement() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="w-full">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center space-x-4">
-            <Button onClick={() => router.push('/')} variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <BookOpen className="w-8 h-8 mr-3" />
-              Gerenciar Cursos
-            </h1>
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] rounded-2xl p-8 text-white shadow-xl mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button onClick={() => router.push('/')} variant="outline" size="sm" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold mb-2 flex items-center">
+                  <BookOpen className="w-8 h-8 mr-3" />
+                  Gerenciar Cursos
+                </h1>
+                <p className="text-white/90">
+                  Administre cursos, preços e configurações
+                </p>
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <Button 
+                onClick={() => router.push('/admin/courses/new')}
+                className="bg-white/20 text-white border-white/30 hover:bg-white/30 backdrop-blur-sm"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Novo Curso
+              </Button>
+            </div>
           </div>
-          <Button onClick={() => router.push('/admin/courses/new')}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Curso
-          </Button>
+          {/* Mobile button */}
+          <div className="md:hidden mt-4">
+            <Button 
+              onClick={() => router.push('/admin/courses/new')}
+              className="bg-white/20 text-white border-white/30 hover:bg-white/30 backdrop-blur-sm w-full"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Novo Curso
+            </Button>
+          </div>
         </div>
 
-        {/* Search */}
-        <Card className="mb-6">
+        {/* Search Section */}
+        <Card className="mb-6 shadow-lg border-0">
           <CardContent className="pt-6">
             <div className="flex gap-4">
               <div className="flex-1">
                 <Input
-                  placeholder="Buscar cursos..."
+                  placeholder="Buscar cursos por nome ou descrição..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="border-2 border-gray-200 focus:border-[#667eea] focus:ring-4 focus:ring-[#667eea]/20 transition-all duration-300"
                 />
               </div>
-              <Button onClick={handleSearch}>
+              <Button 
+                onClick={handleSearch}
+                className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fd8] hover:to-[#6b4190] text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300"
+              >
                 <Search className="w-4 h-4 mr-2" />
                 Buscar
               </Button>
@@ -204,26 +232,35 @@ export default function CoursesManagement() {
         </Card>
 
         {/* Courses Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Cursos Cadastrados</CardTitle>
-            <CardDescription>
+        <Card className="shadow-xl border-0">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-lg">
+            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center">
+              <BookOpen className="w-6 h-6 mr-2 text-[#667eea]" />
+              Cursos Cadastrados
+            </CardTitle>
+            <CardDescription className="text-lg">
               {courses.length} curso{courses.length !== 1 ? 's' : ''} encontrado{courses.length !== 1 ? 's' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {courses.length === 0 ? (
-              <div className="text-center py-8">
-                <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-2 text-sm font-semibold text-foreground">
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                  <BookOpen className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   Nenhum curso encontrado
                 </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {searchTerm ? 'Tente uma busca diferente.' : 'Comece criando um novo curso.'}
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  {searchTerm ? 'Tente uma busca diferente ou ajuste os filtros.' : 'Comece criando um novo curso para oferecer aos seus alunos.'}
                 </p>
                 {!searchTerm && (
-                  <Button onClick={() => router.push('/admin/courses/new')} className="mt-4">
-                    <Plus className="w-4 h-4 mr-2" />
+                  <Button 
+                    onClick={() => router.push('/admin/courses/new')} 
+                    className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fd8] hover:to-[#6b4190] text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300"
+                    size="lg"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
                     Criar Primeiro Curso
                   </Button>
                 )}
@@ -289,6 +326,7 @@ export default function CoursesManagement() {
                             onClick={() => router.push(`/admin/courses/${course.id}/edit`)}
                             variant="outline"
                             size="sm"
+                            className="border-[#667eea] text-[#667eea] hover:bg-[#667eea] hover:text-white transition-all duration-300"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -296,7 +334,7 @@ export default function CoursesManagement() {
                             onClick={() => handleDelete(course.id, course.name)}
                             variant="outline"
                             size="sm"
-                            className="text-destructive hover:text-destructive"
+                            className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

@@ -8,6 +8,7 @@ set -e  # Exit on any error
 
 # Default values
 SERVER="164.163.10.235"
+APP_URL="https://vox-student.hcktplanet.com"
 IDENTITY_FILE="~/.ssh/hunt-luke-2025.pem"
 USER="root"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -114,7 +115,7 @@ print_header
 echo -e "${PURPLE}📍 Configuration:${NC}"
 echo "   🖼️  Timestamped Image: hcktplanet/vox-student:$NEW_IMAGE_TAG"
 echo "   🏷️  Remote Tags: :$NEW_IMAGE_TAG → :latest"
-echo "   🌐 Server: $SERVER"
+echo "   🌐 Application: $APP_URL"
 echo "   👤 User: $USER"
 echo "   🔑 SSH Key: $IDENTITY_FILE"
 echo "   📅 Timestamp: $TIMESTAMP"
@@ -296,8 +297,8 @@ if [ "$SMOKE_TEST_PASSED" = true ]; then
     
     echo ""
     echo -e "${PURPLE}📊 Deployment Summary:${NC}"
-    echo "   🌐 Application URL: http://$SERVER"
-    echo "   🔧 Admin Panel: http://$SERVER/admin"  
+    echo "   🌐 Application URL: $APP_URL"
+    echo "   🔧 Admin Panel: $APP_URL/admin"  
     echo "   📅 Deployment Time: $TIMESTAMP"
     echo "   🖼️  Deployed Image: hcktplanet/vox-student:$NEW_IMAGE_TAG"
     echo "   🏷️  Tagged as: latest (docker-compose uses this)"

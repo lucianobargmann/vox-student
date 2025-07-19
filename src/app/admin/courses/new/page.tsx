@@ -90,24 +90,33 @@ export default function NewCourse() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="w-full">
-        <div className="flex justify-between items-center mb-8">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] rounded-2xl p-8 text-white shadow-xl mb-8">
           <div className="flex items-center space-x-4">
-            <Button onClick={() => router.push('/admin/courses')} variant="outline" size="sm">
+            <Button onClick={() => router.push('/admin/courses')} variant="outline" size="sm" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <BookOpen className="w-8 h-8 mr-3" />
-              Novo Curso
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold mb-2 flex items-center">
+                <BookOpen className="w-8 h-8 mr-3" />
+                Novo Curso
+              </h1>
+              <p className="text-white/90">
+                Crie um novo curso para oferecer aos seus alunos
+              </p>
+            </div>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Criar Novo Curso</CardTitle>
-            <CardDescription>
-              Preencha as informações do curso
+        <Card className="shadow-xl border-0">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-lg">
+            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center">
+              <BookOpen className="w-6 h-6 mr-2 text-[#667eea]" />
+              Criar Novo Curso
+            </CardTitle>
+            <CardDescription className="text-lg">
+              Preencha as informações do curso que será oferecido aos alunos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -129,6 +138,7 @@ export default function NewCourse() {
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Ex: Academy, Master, Intensivox..."
                     required
+                    className="border-2 border-gray-200 focus:border-[#667eea] focus:ring-4 focus:ring-[#667eea]/20 transition-all duration-300"
                   />
                 </div>
 
@@ -143,6 +153,7 @@ export default function NewCourse() {
                     value={formData.duration}
                     onChange={(e) => handleInputChange('duration', e.target.value)}
                     placeholder="Ex: 40"
+                    className="border-2 border-gray-200 focus:border-[#667eea] focus:ring-4 focus:ring-[#667eea]/20 transition-all duration-300"
                   />
                 </div>
 
@@ -157,6 +168,7 @@ export default function NewCourse() {
                     value={formData.numberOfLessons}
                     onChange={(e) => handleInputChange('numberOfLessons', e.target.value)}
                     placeholder="Ex: 12"
+                    className="border-2 border-gray-200 focus:border-[#667eea] focus:ring-4 focus:ring-[#667eea]/20 transition-all duration-300"
                   />
                 </div>
               </div>
@@ -170,7 +182,7 @@ export default function NewCourse() {
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Descrição detalhada do curso..."
-                  className="w-full min-h-[100px] px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full min-h-[100px] px-3 py-2 border-2 border-gray-200 focus:border-[#667eea] focus:ring-4 focus:ring-[#667eea]/20 transition-all duration-300 bg-background rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
 
@@ -187,6 +199,7 @@ export default function NewCourse() {
                     value={formData.price}
                     onChange={(e) => handleInputChange('price', e.target.value)}
                     placeholder="Ex: 299.90"
+                    className="border-2 border-gray-200 focus:border-[#667eea] focus:ring-4 focus:ring-[#667eea]/20 transition-all duration-300"
                   />
                 </div>
 
@@ -207,15 +220,20 @@ export default function NewCourse() {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-4">
+              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.push('/admin/courses')}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-300"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fd8] hover:to-[#6b4190] text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:transform-none"
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
