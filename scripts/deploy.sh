@@ -75,9 +75,18 @@ rollback_deployment() {
         exit 1
     fi
     
-    # Stop current containers
-    ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-        "cd /opt/hcktplanet/voxstudent && docker compose down"
+    # Stop current containers with error handling
+    print_step "Stopping containers for rollback..."
+    ROLLBACK_STOP_OUTPUT=$(ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+        "cd /opt/hcktplanet/vox-student && docker compose down" 2>&1)
+    
+    if [ $? -ne 0 ]; then
+        print_warning "Docker compose down failed during rollback:"
+        echo "   $ROLLBACK_STOP_OUTPUT"
+        print_warning "Trying manual stop for rollback..."
+        ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+            "docker stop vox-student && docker rm vox-student" || true
+    fi
     
     # Tag backup as latest
     ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
@@ -85,7 +94,7 @@ rollback_deployment() {
     
     # Restart with backup
     ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-        "cd /opt/hcktplanet/voxstudent && docker compose up -d"
+        "cd /opt/hcktplanet/vox-student && docker compose up -d"
     
     print_success "Manual rollback completed"
     exit 0
@@ -159,22 +168,58 @@ print_success "Ready for deployment - using latest image"
 # Step 5: Deploy new version
 print_step "Deploying new version..."
 
-# Stop existing containers
-ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-    "cd /opt/hcktplanet/voxstudent && docker compose down" || {
-    print_warning "Docker compose down failed, trying manual stop..."
-    ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-        "docker stop vox-student && docker rm vox-student" || true
-}
+# Validate docker-compose.yml before stopping containers
+print_step "Validating docker-compose configuration..."
+VALIDATION_OUTPUT=$(ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+    "cd /opt/hcktplanet/vox-student && docker compose config" 2>&1)
 
-# Start new containers
-ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-    "cd /opt/hcktplanet/voxstudent && docker compose up -d"
+if [ $? -ne 0 ]; then
+    print_warning "Docker compose validation failed:"
+    echo "   $VALIDATION_OUTPUT"
+    print_warning "Attempting deployment anyway with error handling..."
+fi
+
+# Stop existing containers with enhanced error handling
+print_step "Stopping existing containers..."
+STOP_OUTPUT=$(ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+    "cd /opt/hcktplanet/vox-student && docker compose down" 2>&1)
+
+if [ $? -ne 0 ]; then
+    print_warning "Docker compose down failed:"
+    echo "   $STOP_OUTPUT"
+    print_warning "Trying manual container stop..."
+    
+    MANUAL_STOP_OUTPUT=$(ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+        "docker stop vox-student 2>&1 && docker rm vox-student 2>&1" 2>&1)
+    
+    if [ $? -ne 0 ]; then
+        print_warning "Manual container stop also failed:"
+        echo "   $MANUAL_STOP_OUTPUT"
+        print_warning "Continuing with deployment - containers may not exist..."
+    else
+        print_success "Manual container stop successful"
+    fi
+else
+    print_success "Containers stopped successfully"
+fi
+
+# Start new containers with enhanced error handling
+print_step "Starting new containers..."
+START_OUTPUT=$(ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+    "cd /opt/hcktplanet/vox-student && docker compose up -d" 2>&1)
 
 if [ $? -eq 0 ]; then
     print_success "New container started"
 else
-    print_error "Container deployment failed"
+    print_error "Container deployment failed:"
+    echo "   $START_OUTPUT"
+    
+    # Try to get more diagnostic information
+    print_step "Gathering diagnostic information..."
+    ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+        "cd /opt/hcktplanet/vox-student && echo 'Docker images:' && docker images hcktplanet/vox-student && echo 'Docker compose version:' && docker compose version" || true
+    
+    print_error "Deployment failed - check logs above for details"
     exit 1
 fi
 
@@ -256,9 +301,18 @@ else
     if [ -n "$ROLLBACK_IMAGE" ]; then
         print_step "Rolling back to previous image: $ROLLBACK_IMAGE"
         
-        # Stop current containers
-        ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-            "cd /opt/hcktplanet/voxstudent && docker compose down"
+        # Stop current containers with error handling
+        print_step "Stopping containers for auto-rollback..."
+        AUTO_ROLLBACK_STOP_OUTPUT=$(ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+            "cd /opt/hcktplanet/vox-student && docker compose down" 2>&1)
+        
+        if [ $? -ne 0 ]; then
+            print_warning "Docker compose down failed during auto-rollback:"
+            echo "   $AUTO_ROLLBACK_STOP_OUTPUT"
+            print_warning "Trying manual stop for auto-rollback..."
+            ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+                "docker stop vox-student && docker rm vox-student" || true
+        fi
         
         # Tag backup image as latest for rollback
         ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
@@ -266,14 +320,14 @@ else
         
         # Restart with rolled back image (docker-compose should use :latest)
         ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-            "cd /opt/hcktplanet/voxstudent && docker compose up -d"
+            "cd /opt/hcktplanet/vox-student && docker compose up -d"
         
         print_success "Rollback deployment completed"
         
         # Restore database backup
         print_step "Restoring database from backup..."
         ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-            "cd /opt/hcktplanet/voxstudent && docker stop vox-student && sleep 5"
+            "cd /opt/hcktplanet/vox-student && docker stop vox-student && sleep 5"
         
         # Download and restore the backup we just created
         scp -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" \
@@ -281,12 +335,12 @@ else
         
         ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
             "cd /tmp && tar -xzf $BACKUP_FILE && \
-             docker run --rm -v /tmp/${BACKUP_FILE%.*.*}/data:/source -v voxstudent_vox-student-db:/target alpine sh -c 'cp -a /source/. /target/' && \
-             docker run --rm -v /tmp/${BACKUP_FILE%.*.*}/whatsapp-session:/source -v voxstudent_vox-student-whatsapp:/target alpine sh -c 'cp -a /source/. /target/'"
+             docker run --rm -v /tmp/${BACKUP_FILE%.*.*}/data:/source -v vox-student_vox-student-db:/target alpine sh -c 'cp -a /source/. /target/' && \
+             docker run --rm -v /tmp/${BACKUP_FILE%.*.*}/whatsapp-session:/source -v vox-student_vox-student-whatsapp:/target alpine sh -c 'cp -a /source/. /target/'"
         
         # Restart container
         ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
-            "cd /opt/hcktplanet/voxstudent && docker compose up -d"
+            "cd /opt/hcktplanet/vox-student && docker compose up -d"
         
         print_success "Rollback completed! System restored to previous state."
         

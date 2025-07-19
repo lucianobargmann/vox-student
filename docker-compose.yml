@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   vox-student:
-    image: lucianobargmann/vox-student:latest
-    container_name: vox-student-app
+    image: hcktplanet/vox-student:latest
+    container_name: vox-student
     restart: unless-stopped
     ports:
       - "3000:3000"
