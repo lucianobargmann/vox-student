@@ -9,7 +9,9 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+# For QA environment, we need all dependencies including dev ones
+ARG NODE_ENV=production
+RUN if [ "$NODE_ENV" = "qa" ] ; then npm ci ; else npm ci --omit=dev ; fi
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -19,6 +21,11 @@ COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Copy QA environment file for build if NODE_ENV is qa
+ARG NODE_ENV=production
+COPY .env.qa.production* ./
+RUN if [ "$NODE_ENV" = "qa" ] ; then cp .env.qa.production .env.production ; fi
 
 # Build the application
 RUN npm run build
@@ -52,9 +59,11 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 USER nextjs
 
-EXPOSE 3000
-
-ENV PORT=3000
+# Allow port override for different environments
+ARG PORT=3000
+ENV PORT=$PORT
 ENV HOSTNAME="0.0.0.0"
+
+EXPOSE $PORT
 
 CMD ["node", "server.js"]

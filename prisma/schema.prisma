@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -39,11 +39,6 @@ enum EnrollmentStatus {
   transferred
 }
 
-enum ReminderType {
-  aula
-  mentoria
-  reposicao
-}
 
 // User authentication and profiles (passwordless with magic links)
 model User {
@@ -248,9 +243,10 @@ model Attendance {
 // Messaging and reminders
 model ReminderTemplate {
   id          String      @id @default(cuid())
-  name        String      // Template name (e.g., "Lembrete 24h", "Confirmação Mentoria")
-  type        ReminderType // Type of reminder
-  template    String      // Message template with placeholders
+  name        String      // Template name (e.g., "Lembrete Aula Amanhã", "Agendamento Mentoria")
+  category    String?     // Optional category for organization (e.g., "aula", "mentoria", "reposicao")
+  template    String      // Message template with placeholders like {{nome_do_aluno}}
+  description String?     // Optional description of the template
   isActive    Boolean     @default(true) @map("is_active")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
@@ -263,7 +259,7 @@ model SmsReminder {
   recipientName  String      @map("recipient_name")
   recipientPhone String      @map("recipient_phone")
   messageText    String      @map("message_text")
-  messageType    ReminderType @map("message_type")
+  messageType    String @map("message_type")
   sentAt         DateTime?   @map("sent_at")
   deliveryStatus String?     @map("delivery_status")
   errorMessage   String?     @map("error_message")
@@ -277,7 +273,7 @@ model WhatsAppMessage {
   recipientPhone String      @map("recipient_phone")
   messageText    String      @map("message_text")
   messageId      String?     @map("message_id") // WhatsApp message ID
-  messageType    ReminderType? @map("message_type") // Optional: type of reminder
+  messageType    String? @map("message_type") // Optional: type of reminder
   sentAt         DateTime?   @map("sent_at")
   deliveryStatus String      @default("pending") @map("delivery_status") // pending, sent, delivered, failed
   errorMessage   String?     @map("error_message")
@@ -306,7 +302,7 @@ model MessageQueue {
   id             String      @id @default(cuid())
   recipientPhone String      @map("recipient_phone")
   messageText    String      @map("message_text")
-  messageType    ReminderType? @map("message_type")
+  messageType    String? @map("message_type")
   priority       Int         @default(3) // 1 = highest, 5 = lowest
   scheduledFor   DateTime    @map("scheduled_for")
   attempts       Int         @default(0)

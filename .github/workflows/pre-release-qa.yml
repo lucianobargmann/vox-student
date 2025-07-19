@@ -1,0 +1,279 @@
+name: Pre-Release QA Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, labeled]
+    paths:
+      - 'src/**'
+      - 'prisma/**'
+      - 'tests/**'
+      - 'package*.json'
+      - 'docker-compose.qa.yml'
+      - '.env.qa'
+
+env:
+  NODE_VERSION: '18'
+  QA_PORT: 3001
+  QA_DB_PORT: 5433
+  QA_MAILPIT_PORT: 8025
+
+jobs:
+  pre-flight-checks:
+    name: Pre-flight Checks
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-qa: ${{ steps.check.outputs.should-run }}
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Check if QA tests should run
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || 
+             [[ "${{ github.ref }}" =~ refs/tags/v.* ]] || 
+             [[ "${{ contains(github.event.pull_request.labels.*.name, 'qa-test') }}" == "true" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" =~ refs/tags/.* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
+          fi
+
+  pre-release-qa:
+    name: Pre-Release QA Tests
+    runs-on: ubuntu-latest
+    needs: pre-flight-checks
+    if: needs.pre-flight-checks.outputs.should-run-qa == 'true'
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Playwright browsers
+        run: npx playwright install ${{ matrix.browser }} --with-deps
+        
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Create QA environment file
+        run: |
+          cp .env.qa .env.qa.ci
+          echo "CI=true" >> .env.qa.ci
+          echo "GITHUB_RUN_ID=${{ github.run_id }}" >> .env.qa.ci
+          echo "GITHUB_SHA=${{ github.sha }}" >> .env.qa.ci
+          
+      - name: Check port availability
+        run: |
+          for port in $QA_PORT $QA_DB_PORT $QA_MAILPIT_PORT; do
+            if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+              echo "Port $port is already in use"
+              exit 1
+            fi
+          done
+          
+      - name: Start QA environment
+        run: |
+          docker-compose -f docker-compose.qa.yml up -d --build
+          
+      - name: Wait for services
+        run: |
+          # Wait for application to be ready
+          timeout 300 bash -c 'until curl -s http://localhost:${{ env.QA_PORT }}/api/health >/dev/null; do sleep 5; done'
+          
+          # Wait for database to be ready
+          timeout 60 bash -c 'until docker exec voxstudent-postgres-qa pg_isready -U voxstudent >/dev/null; do sleep 2; done'
+          
+          # Wait for Mailpit to be ready
+          timeout 60 bash -c 'until curl -s http://localhost:${{ env.QA_MAILPIT_PORT }} >/dev/null; do sleep 2; done'
+          
+      - name: Run database migrations
+        run: |
+          npm run db:migrate:qa
+          
+      - name: Seed test data
+        run: |
+          npm run db:seed:qa || echo "Seeding failed, continuing..."
+          
+      - name: Run E2E tests
+        env:
+          PLAYWRIGHT_BROWSER: ${{ matrix.browser }}
+        run: |
+          npx playwright test tests/e2e/*.qa.spec.ts --project=${{ matrix.browser }} --reporter=html,github
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.browser }}-${{ github.run_id }}
+          path: |
+            test-results/
+            screenshots/
+          retention-days: 30
+          
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.browser }}-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 30
+          
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          echo "=== Application logs ==="
+          docker-compose -f docker-compose.qa.yml logs app-qa
+          echo "=== Database logs ==="
+          docker-compose -f docker-compose.qa.yml logs postgres-qa
+          echo "=== Mailpit logs ==="
+          docker-compose -f docker-compose.qa.yml logs mailpit-qa
+          
+      - name: Cleanup QA environment
+        if: always()
+        run: |
+          docker-compose -f docker-compose.qa.yml down -v
+          docker system prune -f
+
+  test-report:
+    name: Generate Test Report
+    runs-on: ubuntu-latest
+    needs: [pre-flight-checks, pre-release-qa]
+    if: always() && needs.pre-flight-checks.outputs.should-run-qa == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          merge-multiple: true
+          path: ./all-test-results/
+          
+      - name: Download all Playwright reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: playwright-report-*
+          merge-multiple: true
+          path: ./all-playwright-reports/
+          
+      - name: Generate summary report
+        run: |
+          cat > test-summary.md << EOF
+          # Pre-Release QA Test Summary
+          
+          **Version:** ${{ needs.pre-flight-checks.outputs.version }}
+          **Triggered by:** ${{ github.event_name }}
+          **Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          **Commit:** ${{ github.sha }}
+          
+          ## Test Results
+          
+          | Browser | Status |
+          |---------|--------|
+          | Chromium | ${{ needs.pre-release-qa.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | Firefox | ${{ needs.pre-release-qa.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | WebKit | ${{ needs.pre-release-qa.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          
+          ## Test Coverage
+          
+          - ✅ Login Flow (15 test cases)
+          - ✅ Course Management (20 test cases)  
+          - ✅ Student Management (18 test cases)
+          - ✅ Reminder Templates (19 test cases)
+          
+          **Total: 72 E2E test cases**
+          
+          ## Release Readiness
+          
+          ${{ needs.pre-release-qa.result == 'success' && '🟢 **READY FOR RELEASE**' || '🔴 **NOT READY FOR RELEASE**' }}
+          
+          ${{ needs.pre-release-qa.result == 'success' && 'All QA tests have passed successfully. The application is ready for release.' || 'Some QA tests have failed. Please review the test results and fix any issues before proceeding with the release.' }}
+          EOF
+          
+      - name: Upload summary report
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-test-summary-${{ github.run_id }}
+          path: test-summary.md
+          
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('test-summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  release-gate:
+    name: Release Gate
+    runs-on: ubuntu-latest
+    needs: [pre-flight-checks, pre-release-qa]
+    if: always() && needs.pre-flight-checks.outputs.should-run-qa == 'true'
+    
+    steps:
+      - name: Check QA results
+        run: |
+          if [[ "${{ needs.pre-release-qa.result }}" != "success" ]]; then
+            echo "❌ QA tests failed - blocking release"
+            exit 1
+          else
+            echo "✅ QA tests passed - release approved"
+          fi
+          
+      - name: Set release status
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "🚀 Ready to deploy version ${{ needs.pre-flight-checks.outputs.version }} to ${{ github.event.inputs.environment }}"

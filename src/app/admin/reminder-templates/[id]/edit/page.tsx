@@ -6,20 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, MessageSquare, ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
-interface ReminderTemplate {
-  id: string;
-  name: string;
-  type: 'aula' | 'mentoria' | 'reposicao';
-  template: string;
-  isActive: boolean;
-}
+import { isAdminOrSuperAdmin } from '@/lib/roles';
+import { templatesService, ReminderTemplate } from '@/lib/services/templates.service';
 
 export default function EditReminderTemplate({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -31,40 +24,41 @@ export default function EditReminderTemplate({ params }: { params: Promise<{ id:
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'aula' as 'aula' | 'mentoria' | 'reposicao',
+    category: '',
     template: '',
+    description: '',
     isActive: true
   });
 
   useEffect(() => {
-    if (!loading && (!user || user.profile?.role !== 'admin')) {
+    if (!loading && !isAdminOrSuperAdmin(user)) {
       router.push('/');
       return;
     }
 
-    if (user && user.profile?.role === 'admin') {
+    if (isAdminOrSuperAdmin(user)) {
       fetchTemplate();
     }
-  }, [user, loading]);
+  }, [user, loading, router]);
 
   const fetchTemplate = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/reminder-templates/${resolvedParams.id}`);
+      const response = await templatesService.getTemplate(resolvedParams.id);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch template');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch template');
       }
 
-      const result = await response.json();
-      const templateData = result.data;
+      const templateData = response.data!;
       setTemplate(templateData);
       
       // Populate form
       setFormData({
         name: templateData.name || '',
-        type: templateData.type || 'aula',
+        category: templateData.category || '',
         template: templateData.template || '',
+        description: templateData.description || '',
         isActive: templateData.isActive !== undefined ? templateData.isActive : true
       });
     } catch (err) {
@@ -89,22 +83,16 @@ export default function EditReminderTemplate({ params }: { params: Promise<{ id:
 
     try {
       setIsSaving(true);
-      const response = await fetch(`/api/reminder-templates/${resolvedParams.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          type: formData.type,
-          template: formData.template.trim(),
-          isActive: formData.isActive
-        }),
+      const response = await templatesService.updateTemplate(resolvedParams.id, {
+        name: formData.name.trim(),
+        category: formData.category.trim() || undefined,
+        template: formData.template.trim(),
+        description: formData.description.trim() || undefined,
+        isActive: formData.isActive
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update template');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update template');
       }
 
       toast.success('Template atualizado com sucesso!');
@@ -127,7 +115,7 @@ export default function EditReminderTemplate({ params }: { params: Promise<{ id:
     );
   }
 
-  if (!user || user.profile?.role !== 'admin') {
+  if (!user || !isAdminOrSuperAdmin(user)) {
     return null;
   }
 
@@ -179,24 +167,30 @@ export default function EditReminderTemplate({ params }: { params: Promise<{ id:
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Ex: Lembrete de Aula Padrão"
+                    placeholder="Ex: Lembrete Aula Amanhã"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="type">Tipo *</Label>
-                  <Select value={formData.type} onValueChange={(value: 'aula' | 'mentoria' | 'reposicao') => setFormData({ ...formData, type: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aula">Aula</SelectItem>
-                      <SelectItem value="mentoria">Mentoria</SelectItem>
-                      <SelectItem value="reposicao">Reposição</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="category">Categoria (opcional)</Label>
+                  <Input
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="Ex: aula, mentoria, reposicao"
+                  />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição (opcional)</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Ex: Enviado para alunos 24h antes da aula"
+                />
               </div>
 
               <div className="space-y-2">
@@ -205,12 +199,12 @@ export default function EditReminderTemplate({ params }: { params: Promise<{ id:
                   id="template"
                   value={formData.template}
                   onChange={(e) => setFormData({ ...formData, template: e.target.value })}
-                  placeholder="Olá {nome_aluno}, você tem uma {tipo_evento} marcada para {data} às {hora}. Local: {local}. Não esqueça!"
+                  placeholder="Olá {{nome_do_aluno}}, você tem uma {{tipo_evento}} marcada para {{data}} às {{hora}}. Local: {{local}}. Não esqueça!"
                   rows={6}
                   required
                 />
                 <p className="text-sm text-muted-foreground">
-                  Use variáveis como: {'{nome_aluno}'}, {'{tipo_evento}'}, {'{data}'}, {'{hora}'}, {'{local}'}, {'{curso}'}, {'{professor}'}
+                  Use variáveis como: {`{{nome_do_aluno}}, {{nome_curso}}, {{data_aula}}, {{hora_inicio_aula}}, {{nome_professor}}, {{local_aula}}`}
                 </p>
               </div>
 

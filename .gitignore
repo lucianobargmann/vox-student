@@ -48,3 +48,6 @@ playwright-report/
 whatsapp-session/
 .wwebjs_cache/
 scripts/template/*
+.clickup-config.json
+.clickup-time-tracking.json
+screenshots/

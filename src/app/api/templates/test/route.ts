@@ -11,18 +11,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { template, templateType, contextOptions } = body;
+    const { template, category, contextOptions } = body;
 
     if (!template || !template.trim()) {
       return NextResponse.json(
         { error: 'Template é obrigatório' },
-        { status: 400 }
-      );
-    }
-
-    if (!templateType || !['aula', 'mentoria', 'reposicao'].includes(templateType)) {
-      return NextResponse.json(
-        { error: 'Tipo de template inválido' },
         { status: 400 }
       );
     }
@@ -49,7 +42,7 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    if (!context.class && (templateType === 'aula' || templateType === 'reposicao')) {
+    if (!context.class && (category === 'aula' || category === 'reposicao')) {
       context.class = {
         id: 'sample-class-id',
         name: 'Inglês Intermediário - Turma A',
@@ -88,8 +81,8 @@ export async function POST(request: NextRequest) {
     // Process the template
     const processed = TemplateProcessor.processTemplate(template, context);
 
-    // Get available placeholders for this template type
-    const availablePlaceholders = TemplateProcessor.getAvailablePlaceholders(templateType);
+    // Get available variables for this category
+    const availableVariables = TemplateProcessor.getAvailableVariables(category);
 
     return NextResponse.json({
       success: true,
@@ -97,7 +90,7 @@ export async function POST(request: NextRequest) {
         message: processed.message,
         usedPlaceholders: processed.placeholders
       },
-      availablePlaceholders,
+      availableVariables,
       sampleContext: context
     });
 
@@ -119,44 +112,36 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const templateType = searchParams.get('type') as 'aula' | 'mentoria' | 'reposicao';
+    const category = searchParams.get('category');
 
-    if (!templateType || !['aula', 'mentoria', 'reposicao'].includes(templateType)) {
-      return NextResponse.json(
-        { error: 'Tipo de template inválido' },
-        { status: 400 }
-      );
-    }
+    const availableVariables = TemplateProcessor.getAvailableVariables(category || undefined);
 
-    const availablePlaceholders = TemplateProcessor.getAvailablePlaceholders(templateType);
-
-    // Group placeholders by category
-    const groupedPlaceholders = {
-      student: availablePlaceholders.filter(p => p.startsWith('student.')),
-      class: availablePlaceholders.filter(p => p.startsWith('class.')),
-      lesson: availablePlaceholders.filter(p => p.startsWith('lesson.')),
-      course: availablePlaceholders.filter(p => p.startsWith('course.')),
-      teacher: availablePlaceholders.filter(p => p.startsWith('teacher.')),
-      system: availablePlaceholders.filter(p => p.startsWith('system.'))
+    // Group variables by type
+    const groupedVariables = {
+      aluno: availableVariables.filter(v => v.name.includes('aluno')),
+      aula: availableVariables.filter(v => v.name.includes('aula')),
+      curso: availableVariables.filter(v => v.name.includes('curso')),
+      professor: availableVariables.filter(v => v.name.includes('professor')),
+      sistema: availableVariables.filter(v => v.name.includes('sistema'))
     };
 
     return NextResponse.json({
-      templateType,
-      placeholders: availablePlaceholders,
-      groupedPlaceholders,
+      category,
+      variables: availableVariables,
+      groupedVariables,
       examples: {
-        'student.name': 'João Silva',
-        'student.email': 'joao.silva@email.com',
-        'student.phone': '+55 11 99999-9999',
-        'class.name': 'Inglês Intermediário - Turma A',
-        'class.startTime': '19:00',
-        'class.endTime': '20:30',
-        'lesson.scheduledDate': '15/07/2025 19:00',
-        'lesson.title': 'Present Perfect Tense',
-        'course.name': 'Curso de Inglês Intermediário',
-        'teacher.name': 'Prof. Maria Santos',
-        'system.name': 'VoxStudent',
-        'system.url': 'https://voxstudent.com'
+        'nome_do_aluno': 'João Silva',
+        'email_do_aluno': 'joao.silva@email.com',
+        'telefone_do_aluno': '+55 11 99999-9999',
+        'nome_aula': 'Inglês Intermediário - Turma A',
+        'hora_inicio_aula': '19:00',
+        'hora_fim_aula': '20:30',
+        'data_aula': '15/07/2025 19:00',
+        'titulo_aula': 'Present Perfect Tense',
+        'nome_curso': 'Curso de Inglês Intermediário',
+        'nome_professor': 'Prof. Maria Santos',
+        'nome_sistema': 'VoxStudent',
+        'url_sistema': 'https://voxstudent.com'
       }
     });
 

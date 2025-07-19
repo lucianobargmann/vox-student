@@ -1,0 +1,46 @@
+# Puppeteer Test Runner Dockerfile
+FROM node:18-alpine
+
+# Install Chromium and dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    curl \
+    wget
+
+# Set Puppeteer to use installed Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Create directories for test outputs
+RUN mkdir -p test-results screenshots
+
+# Set user for security
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S puppeteer -u 1001
+RUN chown -R puppeteer:nodejs /app
+USER puppeteer
+
+# Default command
+CMD ["npm", "run", "test:e2e:qa"]

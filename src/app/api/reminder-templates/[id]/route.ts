@@ -44,18 +44,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, type, template, isActive } = body;
+    const { name, category, template, description, isActive } = body;
 
     if (!name || name.trim().length < 2) {
       return NextResponse.json(
         { error: 'Nome do template é obrigatório (mínimo 2 caracteres)' },
-        { status: 400 }
-      );
-    }
-
-    if (!type || !['aula', 'mentoria', 'reposicao'].includes(type)) {
-      return NextResponse.json(
-        { error: 'Tipo de lembrete inválido' },
         { status: 400 }
       );
     }
@@ -80,8 +73,9 @@ export async function PUT(
       where: { id },
       data: {
         name: name.trim(),
-        type,
+        category: category?.trim() || null,
         template: template.trim(),
+        description: description?.trim() || null,
         isActive: isActive !== undefined ? isActive : oldTemplate.isActive
       }
     });

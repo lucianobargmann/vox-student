@@ -22,8 +22,9 @@ export default function NewReminderTemplate() {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'aula' as 'aula' | 'mentoria' | 'reposicao',
+    category: '',
     template: '',
+    description: '',
     isActive: true
   });
 
@@ -51,8 +52,9 @@ export default function NewReminderTemplate() {
       setIsSaving(true);
       const response = await templatesService.createTemplate({
         name: formData.name.trim(),
-        type: formData.type,
+        category: formData.category.trim() || undefined,
         template: formData.template.trim(),
+        description: formData.description.trim() || undefined,
         isActive: formData.isActive
       });
 
@@ -114,24 +116,30 @@ export default function NewReminderTemplate() {
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Ex: Lembrete de Aula Padrão"
+                    placeholder="Ex: Lembrete Aula Amanhã"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="type">Tipo *</Label>
-                  <Select value={formData.type} onValueChange={(value: 'aula' | 'mentoria' | 'reposicao') => setFormData({ ...formData, type: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aula">Aula</SelectItem>
-                      <SelectItem value="mentoria">Mentoria</SelectItem>
-                      <SelectItem value="reposicao">Reposição</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="category">Categoria (opcional)</Label>
+                  <Input
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="Ex: aula, mentoria, reposicao"
+                  />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição (opcional)</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Ex: Enviado para alunos 24h antes da aula"
+                />
               </div>
 
               <div className="space-y-2">
@@ -140,12 +148,12 @@ export default function NewReminderTemplate() {
                   id="template"
                   value={formData.template}
                   onChange={(e) => setFormData({ ...formData, template: e.target.value })}
-                  placeholder="Olá {nome_aluno}, você tem uma {tipo_evento} marcada para {data} às {hora}. Local: {local}. Não esqueça!"
+                  placeholder="Olá {{nome_do_aluno}}, você tem uma {{tipo_evento}} marcada para {{data}} às {{hora}}. Local: {{local}}. Não esqueça!"
                   rows={6}
                   required
                 />
                 <p className="text-sm text-muted-foreground">
-                  Use variáveis como: {'{nome_aluno}'}, {'{tipo_evento}'}, {'{data}'}, {'{hora}'}, {'{local}'}, {'{curso}'}, {'{professor}'}
+                  Use variáveis como: {`{{nome_do_aluno}}, {{nome_curso}}, {{data_aula}}, {{hora_aula}}, {{nome_professor}}, {{local_aula}}`}
                 </p>
               </div>
 

@@ -14,11 +14,19 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
 
-    let whereClause = {};
-    if (type) {
-      whereClause = { type };
+    let whereClause: any = {};
+    if (category) {
+      whereClause.category = category;
+    }
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { template: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
     }
 
     const templates = await prisma.reminderTemplate.findMany({
@@ -33,7 +41,7 @@ export async function GET(request: NextRequest) {
         eventType: 'data_access',
         severity: 'low',
         description: `User accessed reminder templates list`,
-        metadata: JSON.stringify({ type }),
+        metadata: JSON.stringify({ category, search }),
         ipAddress: request.ip || 'unknown',
         userAgent: request.headers.get('User-Agent') || 'unknown'
       }
@@ -55,18 +63,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, type, template } = body;
+    const { name, category, template, description, isActive = true } = body;
 
     if (!name || name.trim().length < 2) {
       return NextResponse.json(
         { error: 'Nome do template é obrigatório (mínimo 2 caracteres)' },
-        { status: 400 }
-      );
-    }
-
-    if (!type || !['aula', 'mentoria', 'reposicao'].includes(type)) {
-      return NextResponse.json(
-        { error: 'Tipo de lembrete inválido' },
         { status: 400 }
       );
     }
@@ -90,8 +91,10 @@ export async function POST(request: NextRequest) {
     const reminderTemplate = await prisma.reminderTemplate.create({
       data: {
         name: name.trim(),
-        type,
-        template: template.trim()
+        category: category?.trim() || null,
+        template: template.trim(),
+        description: description?.trim() || null,
+        isActive
       }
     });
 

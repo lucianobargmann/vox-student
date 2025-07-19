@@ -18,7 +18,19 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:qa": "playwright test tests/e2e/*.qa.spec.ts",
+    "qa:setup": "docker-compose -f docker-compose.qa.yml up -d --build",
+    "qa:teardown": "docker-compose -f docker-compose.qa.yml down -v",
+    "qa:test": "docker-compose -f docker-compose.qa.yml --profile testing up --build --abort-on-container-exit",
+    "qa:logs": "docker-compose -f docker-compose.qa.yml logs -f",
+    "qa:full": "npm run qa:setup && sleep 30 && npm run test:e2e:qa && npm run qa:teardown",
+    "db:migrate:qa": "dotenv -e .env.qa npx prisma migrate deploy",
+    "db:seed:qa": "dotenv -e .env.qa npx prisma db seed",
+    "db:reset:qa": "dotenv -e .env.qa npx prisma migrate reset --force",
+    "pre-release": "./scripts/pre-release-qa.sh",
+    "pre-release:setup": "./scripts/pre-release-qa.sh --setup-only",
+    "pre-release:cleanup": "./scripts/pre-release-qa.sh --cleanup"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -69,6 +81,7 @@
     "@types/puppeteer": "^5.4.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^7.4.2",
     "eslint": "^9",
     "eslint-config-next": "15.3.5",
     "jest": "^30.0.4",

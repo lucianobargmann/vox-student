@@ -1,0 +1,107 @@
+# Docker Compose for QA Environment
+
+services:
+  # PostgreSQL Database for QA
+  postgres-qa:
+    image: postgres:15-alpine
+    container_name: voxstudent-postgres-qa
+    environment:
+      POSTGRES_DB: voxstudent_qa
+      POSTGRES_USER: voxstudent
+      POSTGRES_PASSWORD: voxstudent
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_qa_data:/var/lib/postgresql/data
+      - ./scripts/init-qa-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - voxstudent-qa
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voxstudent -d voxstudent_qa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mailpit for email testing
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: voxstudent-mailpit-qa
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - voxstudent-qa
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # VoxStudent Application (QA)
+  app-qa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        NODE_ENV: qa
+        PORT: 3001
+    container_name: voxstudent-app-qa
+    environment:
+      - NODE_ENV=qa
+    env_file:
+      - .env.qa
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres-qa:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    networks:
+      - voxstudent-qa
+    volumes:
+      - ./prisma:/app/prisma
+      - ./public:/app/public
+      - qa_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Puppeteer Test Runner
+  puppeteer-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.puppeteer
+    container_name: voxstudent-puppeteer-qa
+    environment:
+      - BASE_URL=http://app-qa:3001
+      - HEADLESS=true
+      - SLOWMO=100
+    depends_on:
+      app-qa:
+        condition: service_healthy
+    networks:
+      - voxstudent-qa
+    volumes:
+      - ./tests:/app/tests
+      - ./test-results:/app/test-results
+      - ./screenshots:/app/screenshots
+    profiles:
+      - testing
+    command: npm run test:e2e:qa
+
+volumes:
+  postgres_qa_data:
+    driver: local
+  qa_uploads:
+    driver: local
+
+networks:
+  voxstudent-qa:
+    driver: bridge

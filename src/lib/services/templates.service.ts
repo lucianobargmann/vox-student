@@ -3,8 +3,9 @@ import { apiClient, ApiResponse } from '../api-client';
 export interface ReminderTemplate {
   id: string;
   name: string;
-  type: 'aula' | 'mentoria' | 'reposicao';
+  category?: string;
   template: string;
+  description?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -12,8 +13,9 @@ export interface ReminderTemplate {
 
 export interface CreateTemplateRequest {
   name: string;
-  type: 'aula' | 'mentoria' | 'reposicao';
+  category?: string;
   template: string;
+  description?: string;
   isActive?: boolean;
 }
 

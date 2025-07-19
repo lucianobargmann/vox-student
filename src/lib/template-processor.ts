@@ -77,7 +77,32 @@ export class TemplateProcessor {
    * Resolve a placeholder to its actual value
    */
   private static resolvePlaceholder(placeholder: string, context: TemplateContext): any {
-    const parts = placeholder.split('.');
+    // Handle simplified Portuguese variable names
+    const variableMap: Record<string, string> = {
+      'nome_do_aluno': 'student.name',
+      'email_do_aluno': 'student.email',
+      'telefone_do_aluno': 'student.phone',
+      'nome_curso': 'course.name',
+      'descricao_curso': 'course.description',
+      'nome_aula': 'class.name',
+      'data_aula': 'lesson.scheduledDate',
+      'hora_inicio_aula': 'lesson.startTime',
+      'hora_fim_aula': 'lesson.endTime',
+      'dia_da_semana': 'class.dayOfWeek',
+      'titulo_aula': 'lesson.title',
+      'nome_professor': 'teacher.name',
+      'email_professor': 'teacher.email',
+      'telefone_professor': 'teacher.phone',
+      'local_aula': 'class.location',
+      'nome_sistema': 'system.name',
+      'url_sistema': 'system.url',
+      'email_suporte': 'system.supportEmail',
+      'telefone_suporte': 'system.supportPhone'
+    };
+
+    // Convert simplified variable to dot notation if found
+    const actualPlaceholder = variableMap[placeholder] || placeholder;
+    const parts = actualPlaceholder.split('.');
     let current: any = context;
 
     for (const part of parts) {
@@ -110,53 +135,66 @@ export class TemplateProcessor {
   }
 
   /**
-   * Get available placeholders for a template type
+   * Get available variables in Portuguese for the UI
+   */
+  static getAvailableVariables(category?: string): Array<{name: string, description: string}> {
+    const allVariables = [
+      { name: 'nome_do_aluno', description: 'Nome do aluno' },
+      { name: 'email_do_aluno', description: 'Email do aluno' },
+      { name: 'telefone_do_aluno', description: 'Telefone do aluno' },
+      { name: 'nome_curso', description: 'Nome do curso' },
+      { name: 'descricao_curso', description: 'Descrição do curso' },
+      { name: 'nome_aula', description: 'Nome da aula/turma' },
+      { name: 'data_aula', description: 'Data da aula' },
+      { name: 'hora_inicio_aula', description: 'Hora de início da aula' },
+      { name: 'hora_fim_aula', description: 'Hora de fim da aula' },
+      { name: 'dia_da_semana', description: 'Dia da semana da aula' },
+      { name: 'titulo_aula', description: 'Título da aula' },
+      { name: 'nome_professor', description: 'Nome do professor' },
+      { name: 'email_professor', description: 'Email do professor' },
+      { name: 'telefone_professor', description: 'Telefone do professor' },
+      { name: 'local_aula', description: 'Local da aula' },
+      { name: 'nome_sistema', description: 'Nome do sistema' },
+      { name: 'url_sistema', description: 'URL do sistema' },
+      { name: 'email_suporte', description: 'Email de suporte' },
+      { name: 'telefone_suporte', description: 'Telefone de suporte' }
+    ];
+
+    // Filter by category if specified
+    if (category) {
+      switch (category.toLowerCase()) {
+        case 'aula':
+          return allVariables.filter(v => 
+            v.name.includes('aluno') || 
+            v.name.includes('curso') || 
+            v.name.includes('aula') || 
+            v.name.includes('professor') ||
+            v.name.includes('sistema')
+          );
+        case 'mentoria':
+          return allVariables.filter(v => 
+            v.name.includes('aluno') || 
+            v.name.includes('professor') ||
+            v.name.includes('sistema') ||
+            v.name === 'data_aula' ||
+            v.name === 'hora_inicio_aula' ||
+            v.name === 'hora_fim_aula'
+          );
+        case 'reposicao':
+          return allVariables;
+        default:
+          return allVariables;
+      }
+    }
+
+    return allVariables;
+  }
+
+  /**
+   * Get available placeholders for a template type (legacy)
    */
   static getAvailablePlaceholders(templateType: 'aula' | 'mentoria' | 'reposicao'): string[] {
-    const commonPlaceholders = [
-      'student.name',
-      'student.email',
-      'student.phone',
-      'system.name',
-      'system.url',
-      'system.supportEmail',
-      'system.supportPhone'
-    ];
-
-    const classPlaceholders = [
-      'class.name',
-      'class.startTime',
-      'class.endTime',
-      'class.dayOfWeek',
-      'course.name',
-      'course.description',
-      'lesson.scheduledDate',
-      'lesson.startTime',
-      'lesson.endTime',
-      'lesson.title',
-      'teacher.name',
-      'teacher.email',
-      'teacher.phone'
-    ];
-
-    switch (templateType) {
-      case 'aula':
-      case 'reposicao':
-        return [...commonPlaceholders, ...classPlaceholders];
-      case 'mentoria':
-        return [
-          ...commonPlaceholders,
-          'lesson.scheduledDate',
-          'lesson.startTime',
-          'lesson.endTime',
-          'lesson.title',
-          'teacher.name',
-          'teacher.email',
-          'teacher.phone'
-        ];
-      default:
-        return commonPlaceholders;
-    }
+    return this.getAvailableVariables(templateType).map(v => v.name);
   }
 
   /**

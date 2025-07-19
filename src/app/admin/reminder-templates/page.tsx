@@ -77,8 +77,9 @@ export default function ReminderTemplatesManagement() {
     });
   };
 
-  const getTypeBadgeVariant = (type: string) => {
-    switch (type) {
+  const getCategoryBadgeVariant = (category?: string) => {
+    if (!category) return 'secondary';
+    switch (category.toLowerCase()) {
       case 'aula':
         return 'info';
       case 'mentoria':
@@ -90,8 +91,9 @@ export default function ReminderTemplatesManagement() {
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
+  const getCategoryLabel = (category?: string) => {
+    if (!category) return 'Sem categoria';
+    switch (category.toLowerCase()) {
       case 'aula':
         return 'Aula';
       case 'mentoria':
@@ -99,7 +101,7 @@ export default function ReminderTemplatesManagement() {
       case 'reposicao':
         return 'Reposição';
       default:
-        return type;
+        return category;
     }
   };
 
@@ -188,7 +190,7 @@ export default function ReminderTemplatesManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead>Template</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Criado em</TableHead>
@@ -200,8 +202,8 @@ export default function ReminderTemplatesManagement() {
                     <TableRow key={template.id}>
                       <TableCell className="font-medium">{template.name}</TableCell>
                       <TableCell>
-                        <Badge variant={getTypeBadgeVariant(template.type)}>
-                          {getTypeLabel(template.type)}
+                        <Badge variant={getCategoryBadgeVariant(template.category)}>
+                          {getCategoryLabel(template.category)}
                         </Badge>
                       </TableCell>
                       <TableCell>
