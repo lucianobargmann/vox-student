@@ -250,7 +250,7 @@ SMOKE_TEST_PASSED=false
 # Test 1: Check if application responds
 echo "   🔍 Testing application response..."
 for i in {1..5}; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://$SERVER" || echo "000")
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://vox-student.hcktplanet.com/" || echo "000")
     if [ "$HTTP_CODE" = "200" ]; then
         echo "   ✅ Application responding (HTTP 200)"
         break
@@ -268,13 +268,13 @@ done
 # Test 2: Check if login page loads
 if [ "$HTTP_CODE" = "200" ]; then
     echo "   🔍 Testing login page..."
-    LOGIN_TEST=$(curl -s -w "%{http_code}" "http://$SERVER/login" -o /tmp/login_test.html || echo "000")
+    LOGIN_TEST=$(curl -s -w "%{http_code}" "https://vox-student.hcktplanet.com/login" -o /tmp/login_test.html || echo "000")
     if [[ "$LOGIN_TEST" == *"200" ]] && grep -q "Login" /tmp/login_test.html 2>/dev/null; then
         echo "   ✅ Login page loads correctly"
         
         # Test 3: Try to access API health endpoint
         echo "   🔍 Testing API health..."
-        API_TEST=$(curl -s -w "%{http_code}" "http://$SERVER/api/health" -o /tmp/api_test.json || echo "000")
+        API_TEST=$(curl -s -w "%{http_code}" "https://vox-student.hcktplanet.com/api/health" -o /tmp/api_test.json || echo "000")
         
         if [[ "$API_TEST" == *"200" ]] || [[ "$API_TEST" == *"302" ]]; then
             echo "   ✅ API responding"

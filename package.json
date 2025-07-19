@@ -64,7 +64,6 @@
     "react-hot-toast": "^2.5.2",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^4.1.11",
     "whatsapp-web.js": "^1.31.0",
     "zod": "^4.0.5"
   },
@@ -90,6 +89,7 @@
     "node-fetch": "^2.7.0",
     "prisma": "^6.12.0",
     "puppeteer": "^24.13.0",
+    "tailwindcss": "^4.1.11",
     "typescript": "^5",
     "whatwg-fetch": "^3.6.20"
   }
