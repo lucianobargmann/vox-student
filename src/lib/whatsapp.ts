@@ -30,8 +30,23 @@ class WhatsAppService {
   private readonly RATE_LIMIT_MS = 30 * 1000; // 30 seconds
 
   constructor() {
+    // Skip initialization during build time (when NEXT_PHASE is set or during static generation)
+    if (this.isBuildTime()) {
+      return;
+    }
+    
     // Initialize on server startup if we have an authenticated session
     this.initializeIfPreviouslyAuthenticated();
+  }
+
+  private isBuildTime(): boolean {
+    // Check for Next.js build-time environment variables
+    return (
+      process.env.NEXT_PHASE === 'phase-production-build' ||
+      process.env.NEXT_PHASE === 'phase-export' ||
+      process.env.NODE_ENV === undefined ||
+      typeof window !== 'undefined' // Browser environment
+    );
   }
 
   private async initializeIfPreviouslyAuthenticated(): Promise<void> {

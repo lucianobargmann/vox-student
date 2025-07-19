@@ -4,7 +4,7 @@
 # VoxStudent Build Script
 #############################################################################
 # Purpose: Build the VoxStudent application for production deployment
-# Usage: ./scripts/build.sh [options]
+# Usage: ./scripts/docker-build.sh [options]
 # 
 # This script performs the following actions:
 # 1. Validates environment configuration
@@ -329,16 +329,18 @@ build_docker_image() {
     local tag_latest="$IMAGE_NAME:latest"
     
     print_status $BLUE "🐳 Building Docker image..."
-    print_status $BLUE "   Image: $tag_timestamp"
+    print_status $BLUE "   Timestamp: $tag_timestamp"
     print_status $BLUE "   Latest: $tag_latest"
     
-    # Build the image
+    # Build the image with timestamp tag only
     docker build \
         --platform linux/amd64 \
         --build-arg NODE_ENV=$NODE_ENV \
         -t "$tag_timestamp" \
-        -t "$tag_latest" \
         .
+    
+    # Tag the timestamped image as latest locally
+    docker tag "$tag_timestamp" "$tag_latest"
     
     print_status $GREEN "✅ Docker image built successfully"
     print_status $CYAN "🏷️  Tagged as: $tag_timestamp"
@@ -347,6 +349,10 @@ build_docker_image() {
     # Show image info
     local image_size=$(docker images --format "table {{.Size}}" "$tag_latest" | tail -n 1)
     print_status $BLUE "📊 Docker image size: $image_size"
+    
+    # Export the timestamp for use in deploy script
+    echo "$timestamp" > "$PROJECT_ROOT/.last-build-timestamp"
+    print_status $BLUE "📝 Build timestamp saved: $timestamp"
 }
 
 # Function to show build summary

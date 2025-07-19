@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.last-build-timestamp
 
 # debug
 npm-debug.log*
@@ -52,3 +53,4 @@ scripts/template/*
 .clickup-time-tracking.json
 screenshots/
 database-backups/
+prisma/**/*.db

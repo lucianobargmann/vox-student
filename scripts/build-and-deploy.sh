@@ -4,7 +4,7 @@
 # Usage: ./scripts/build-and-deploy.sh [build-options] [deploy-options]
 # 
 # This script combines the build and deploy processes:
-# 1. Builds the application using build.sh
+# 1. Builds the application using docker-build.sh
 # 2. Deploys the built application using deploy.sh
 
 set -e
@@ -44,14 +44,14 @@ usage() {
     echo ""
     echo "Build and deploy VoxStudent application"
     echo ""
-    echo "This script runs build.sh followed by deploy.sh"
+    echo "This script runs docker-build.sh followed by deploy.sh"
     echo ""
     echo "OPTIONS:"
     echo "  --build-only           Run only the build step"
     echo "  --deploy-only          Run only the deploy step (skip build)"
     echo "  --help                 Display this help message"
     echo ""
-    echo "BUILD OPTIONS (passed to build.sh):"
+    echo "BUILD OPTIONS (passed to docker-build.sh):"
     echo "  --skip-tests           Skip running tests during build"
     echo "  --skip-docker          Skip Docker image build"
     echo "  --verbose              Enable verbose build output"
@@ -125,7 +125,7 @@ main() {
         print_section "Step 1: Building Application"
         print_status $BLUE "🏗️  Running build script with args: ${BUILD_ARGS[*]}"
         
-        if ! ./scripts/build.sh "${BUILD_ARGS[@]}"; then
+        if ! ./scripts/docker-build.sh "${BUILD_ARGS[@]}"; then
             print_status $RED "❌ Build failed!"
             exit 1
         fi

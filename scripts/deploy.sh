@@ -22,8 +22,14 @@ fi
 if [ -n "$1" ]; then
     NEW_IMAGE_TAG="$1"
 else
-    # Find latest built image locally
-    NEW_IMAGE_TAG=$(docker images hcktplanet/vox-student --format "{{.Tag}}" | grep -E '^[0-9]{8}[0-9]{6}$' | head -1 || echo "")
+    # Check if we have a timestamp from the last build
+    if [ -f "$HOME/code/vox-student-nextjs/.last-build-timestamp" ]; then
+        NEW_IMAGE_TAG=$(cat "$HOME/code/vox-student-nextjs/.last-build-timestamp")
+    else
+        # Find latest built image locally
+        NEW_IMAGE_TAG=$(docker images hcktplanet/vox-student --format "{{.Tag}}" | grep -E '^[0-9]{8}[0-9]{6}$' | head -1 || echo "")
+    fi
+    
     if [ -z "$NEW_IMAGE_TAG" ]; then
         echo "❌ No local image found. Please build first or specify image tag."
         exit 1
@@ -106,7 +112,8 @@ IDENTITY_FILE="${IDENTITY_FILE/#\~/$HOME}"
 print_header
 
 echo -e "${PURPLE}📍 Configuration:${NC}"
-echo "   🖼️  New Image: hcktplanet/vox-student:$NEW_IMAGE_TAG"
+echo "   🖼️  Timestamped Image: hcktplanet/vox-student:$NEW_IMAGE_TAG"
+echo "   🏷️  Remote Tags: :$NEW_IMAGE_TAG → :latest"
 echo "   🌐 Server: $SERVER"
 echo "   👤 User: $USER"
 echo "   🔑 SSH Key: $IDENTITY_FILE"
@@ -140,30 +147,38 @@ print_step "Creating database backup before deployment..."
 BACKUP_FILE="vox-student-db-backup-$TIMESTAMP.tar.gz"
 print_success "Database backup completed: $BACKUP_FILE"
 
-# Step 3: Build and tag latest image locally if needed
-print_step "Ensuring latest image is built and tagged..."
-if ! docker image inspect hcktplanet/vox-student:latest >/dev/null 2>&1; then
-    echo "Building latest image..."
-    docker build -t hcktplanet/vox-student:latest .
+# Step 3: Prepare images for deployment
+print_step "Preparing images for deployment..."
+
+# Ensure the timestamped image exists
+if ! docker image inspect hcktplanet/vox-student:$NEW_IMAGE_TAG >/dev/null 2>&1; then
+    print_error "Timestamped image hcktplanet/vox-student:$NEW_IMAGE_TAG not found locally!"
+    exit 1
 fi
 
-# Tag the timestamped version as latest locally
+# Tag the timestamped version as latest locally (in case build script didn't already)
 docker tag hcktplanet/vox-student:$NEW_IMAGE_TAG hcktplanet/vox-student:latest
-print_success "Latest image tagged locally"
+print_success "Images prepared: $NEW_IMAGE_TAG and latest"
 
-# Step 4: Transfer latest image to server
-print_step "Transferring latest image to server..."
-IMAGE_SIZE=$(docker image inspect hcktplanet/vox-student:latest --format='{{.Size}}' | awk '{printf "%.1f MB", $1/1024/1024}')
+# Step 4: Transfer timestamped image to server
+print_step "Transferring timestamped image to server..."
+IMAGE_SIZE=$(docker image inspect hcktplanet/vox-student:$NEW_IMAGE_TAG --format='{{.Size}}' | awk '{printf "%.1f MB", $1/1024/1024}')
 echo "📊 Image size: $IMAGE_SIZE"
+echo "🏷️  Transferring: hcktplanet/vox-student:$NEW_IMAGE_TAG"
 
 if command -v pv >/dev/null 2>&1; then
     echo -e "${PURPLE}📍 Using pv for transfer progress${NC}"
-    docker save hcktplanet/vox-student:latest | pv | ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" "docker load"
+    docker save hcktplanet/vox-student:$NEW_IMAGE_TAG | pv -f | ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" "docker load"
 else
-    docker save hcktplanet/vox-student:latest | ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" "docker load"
+    docker save hcktplanet/vox-student:$NEW_IMAGE_TAG | ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" "docker load"
 fi
-print_success "Latest image transferred successfully"
-print_success "Ready for deployment - using latest image"
+print_success "Timestamped image transferred successfully"
+
+# Step 4.5: Tag the new image as latest on the remote server
+print_step "Tagging new image as latest on remote server..."
+ssh -o StrictHostKeyChecking=no -i "$IDENTITY_FILE" "$USER@$SERVER" \
+    "docker tag hcktplanet/vox-student:$NEW_IMAGE_TAG hcktplanet/vox-student:latest"
+print_success "Remote image tagged as latest"
 
 # Step 5: Deploy new version
 print_step "Deploying new version..."
@@ -284,7 +299,8 @@ if [ "$SMOKE_TEST_PASSED" = true ]; then
     echo "   🌐 Application URL: http://$SERVER"
     echo "   🔧 Admin Panel: http://$SERVER/admin"  
     echo "   📅 Deployment Time: $TIMESTAMP"
-    echo "   🖼️  New Image: hcktplanet/vox-student:$NEW_IMAGE_TAG"
+    echo "   🖼️  Deployed Image: hcktplanet/vox-student:$NEW_IMAGE_TAG"
+    echo "   🏷️  Tagged as: latest (docker-compose uses this)"
     echo "   💾 Backup File: ./database-backups/$BACKUP_FILE"
     
     # Show running containers
